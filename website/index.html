@@ -5,9 +5,9 @@
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <meta
       name="description"
-      content="Accelera is a hybrid Python and C++ machine learning framework for graph pipelines, AutoML, auto preprocessing, model deployment, and code parallelization."
+      content="Accelera is a hybrid Python and C++ machine learning framework for graph pipelines, AutoML, automatic preprocessing, model deployment, reporting, benchmarking, and loop parallelization."
     >
-    <title>Accelera | High-performance ML pipelines</title>
+    <title>Accelera | Hybrid Python/C++ Machine Learning Platform</title>
     <link rel="icon" href="assets/favicon.svg" type="image/svg+xml">
     <link rel="stylesheet" href="styles.css">
   </head>
@@ -24,10 +24,12 @@
         <span class="sr-only">Toggle navigation</span>
       </button>
       <nav id="site-nav" class="site-nav" aria-label="Primary navigation">
-        <a href="#platform">Platform</a>
+        <a href="#overview">Overview</a>
         <a href="#modules">Modules</a>
-        <a href="#workflow">Workflow</a>
-        <a href="#quickstart">Quick start</a>
+        <a href="#architecture">Architecture</a>
+        <a href="#examples">Examples</a>
+        <a href="#deploy">Deploy</a>
+        <a href="docs/">Docs</a>
         <a href="https://github.com/Mohamed-Ashraf273/accelera">GitHub</a>
       </nav>
     </header>
@@ -35,28 +37,30 @@
     <main id="top">
       <section class="hero">
         <div class="hero-copy">
-          <p class="eyebrow">Python ergonomics. C++ execution.</p>
-          <h1>Build, optimize, and deploy machine learning pipelines as production-ready graphs.</h1>
+          <p class="eyebrow">Hybrid ML framework</p>
+          <h1>Graph pipelines, AutoML, deployment, and native acceleration in one workspace.</h1>
           <p class="hero-text">
-            Accelera brings graph-based ML pipelines, automated preprocessing, AutoML search,
-            deployment tooling, and loop parallelization into one extensible framework.
+            Accelera combines a Python developer API with C++ execution paths for machine
+            learning workflows. Build DAG-style pipelines, compare model branches, generate
+            reports, automate preprocessing, search model spaces, package prediction services,
+            and experiment with OpenMP loop parallelization.
           </p>
           <div class="hero-actions">
-            <a class="button primary" href="#quickstart">Start building</a>
-            <a class="button secondary" href="docs/">Read docs</a>
+            <a class="button primary" href="#quickstart">Install Accelera</a>
+            <a class="button secondary" href="docs/">Open documentation</a>
           </div>
           <dl class="hero-stats" aria-label="Project highlights">
             <div>
-              <dt>C++20</dt>
-              <dd>native graph backend</dd>
-            </div>
-            <div>
               <dt>Python 3.9+</dt>
-              <dd>developer API</dd>
+              <dd>pipeline and AutoML APIs</dd>
             </div>
             <div>
-              <dt>Apache 2.0</dt>
-              <dd>open source</dd>
+              <dt>C++20</dt>
+              <dd>graph backend and native modules</dd>
+            </div>
+            <div>
+              <dt>Node 22.23</dt>
+              <dd>benchmark web platform</dd>
             </div>
           </dl>
         </div>
@@ -66,151 +70,304 @@
             <span></span>
             <span></span>
           </div>
-          <pre><code>from accelera.src.accelera_pipe.core.pipeline import Pipeline
+          <pre><code>from sklearn.linear_model import LogisticRegression
+from sklearn.preprocessing import MinMaxScaler, StandardScaler
 
-pipeline = (
-    Pipeline()
-    .input("training_data")
-    .preprocess("clean_features")
-    .branch("random_forest")
-    .branch("linear_model")
-    .metric("accuracy")
+from accelera.src.accelera_pipe.core.pipeline import Pipeline
+
+pipe = Pipeline()
+pipe.branch(
+    "preprocessing",
+    pipe.preprocess("standard", StandardScaler(), branch=True),
+    pipe.preprocess("minmax", MinMaxScaler(), branch=True),
+).model(
+    "logreg",
+    LogisticRegression(max_iter=1000),
+).predict(
+    "predict",
+    test_data=X_test,
+).metric(
+    "accuracy",
+    "accuracy_score",
+    y_true=y_test,
 )
 
-predictions, executed_graph = pipeline(X_train, y_train)</code></pre>
+predictions, executed_graph = pipe(X_train, y_train)</code></pre>
         </div>
       </section>
 
-      <section id="platform" class="section">
-        <div class="section-heading">
-          <p class="eyebrow">Platform</p>
-          <h2>One workspace for ML experimentation and delivery.</h2>
+      <section id="overview" class="section">
+        <div class="section-heading wide">
+          <p class="eyebrow">What It Does</p>
+          <h2>A practical framework for the full machine learning lifecycle.</h2>
           <p>
-            Accelera is designed for teams that need repeatable pipelines, faster experiments,
-            and a path from notebooks to services without rewriting the whole stack.
+            The repository is more than a pipeline helper. It includes the core graph runtime,
+            wrappers for reports and displays, automated preprocessing for several data types,
+            AutoML search components, a model deployment module, benchmark web services, and
+            a source-code parallelizer that can emit OpenMP-enabled C/C++.
           </p>
         </div>
         <div class="feature-grid">
           <article>
-            <h3>Graph pipelines</h3>
-            <p>Create DAG-style workflows with preprocessing, model, prediction, metric, merge, and branch nodes.</p>
+            <h3>Model graph engine</h3>
+            <p>Build directed acyclic ML graphs using input, preprocess, model, predict, metric, merge, and branch nodes.</p>
           </article>
           <article>
-            <h3>Parallel execution</h3>
-            <p>Run independent branches through a C++ backend and reuse fitted execution paths for inference.</p>
+            <h3>Optimized execution</h3>
+            <p>Run independent branches through the C++ graph backend, share duplicated work, and reuse fitted execution paths.</p>
           </article>
           <article>
-            <h3>Automated reports</h3>
-            <p>Generate graph visualizations and HTML reports for model metrics, preprocessing, and comparisons.</p>
+            <h3>Reports and visual output</h3>
+            <p>Generate graph visualizations, metric displays, model reports, and preprocessing reports as HTML artifacts.</p>
           </article>
           <article>
-            <h3>Custom components</h3>
-            <p>Plug in scikit-learn estimators or extend custom classifiers, regressors, clusterers, and transformers.</p>
+            <h3>Service packaging</h3>
+            <p>Package models, schemas, tracking logs, and Docker deployment flows for local, Heroku, and EC2 targets.</p>
           </article>
         </div>
       </section>
 
       <section id="modules" class="section muted">
-        <div class="section-heading">
-          <p class="eyebrow">Modules</p>
-          <h2>Built around the full ML pipeline lifecycle.</h2>
+        <div class="section-heading wide">
+          <p class="eyebrow">Repository Modules</p>
+          <h2>Each module maps to a concrete code surface.</h2>
+          <p>
+            The website mirrors the source tree so contributors and users can quickly understand
+            what lives where and how the pieces connect.
+          </p>
         </div>
-        <div class="module-list">
+        <div class="module-list detailed">
           <article>
-            <span>01</span>
-            <h3>Accelera Pipe</h3>
-            <p>Compose graph pipelines, compare branches, save fitted paths, and generate model reports.</p>
+            <span>accelera_pipe</span>
+            <h3>Graph Pipeline Runtime</h3>
+            <p>Core pipeline classes, executed graph reuse, metrics, report bases, graph reports, and display wrappers.</p>
+            <ul>
+              <li><code>core/pipeline.py</code></li>
+              <li><code>core/executed_graph.py</code></li>
+              <li><code>wrappers/graph_report.py</code></li>
+            </ul>
           </article>
           <article>
-            <span>02</span>
-            <h3>Auto preprocessing</h3>
-            <p>Prepare tabular, text, and image-classification datasets with reusable preprocessors and summaries.</p>
+            <span>auto_preprocessing</span>
+            <h3>Automatic Preprocessing</h3>
+            <p>Training and testing preprocessors for tabular, text, and image-classification datasets with graphable summaries.</p>
+            <ul>
+              <li>categorical, numerical, ordinal, and target wrappers</li>
+              <li>text training/testing preprocessors</li>
+              <li>image dataset and classification loaders</li>
+            </ul>
           </article>
           <article>
-            <span>03</span>
-            <h3>Accelera AutoML</h3>
-            <p>Search classification and regression models under time and trial budgets with warm-start support.</p>
+            <span>accelera_automl</span>
+            <h3>AutoML Search</h3>
+            <p>Classification and regression search, SMAC optimization, meta-learning warm starts, benchmark integrations, and ensembles.</p>
+            <ul>
+              <li><code>core/automl.py</code></li>
+              <li><code>optimization/smac_optimizer.py</code></li>
+              <li><code>stacked_ensemble.py</code></li>
+            </ul>
           </article>
           <article>
-            <span>04</span>
-            <h3>Deployment</h3>
-            <p>Package preprocessing, feature selection, and final models behind schema-validated prediction APIs.</p>
+            <span>parallelizer</span>
+            <h3>Python/C++ Code Parallelizer</h3>
+            <p>Converts supported Python loops to C++, extracts C/C++ loops with Clang AST, classifies candidates, and inserts OpenMP pragmas.</p>
+            <ul>
+              <li><code>py2cpp_converter.py</code></li>
+              <li><code>parallelizer.py</code></li>
+              <li><code>cpp_compiler.py</code></li>
+            </ul>
           </article>
           <article>
-            <span>05</span>
-            <h3>Code parallelizer</h3>
-            <p>Analyze loops, classify OpenMP opportunities, emit parallel C++, and attach compiled accelerators.</p>
+            <span>deployment</span>
+            <h3>MLOps Deployment Toolkit</h3>
+            <p>Model registry commands, schema validation, prediction server, request tracking, GUI entrypoint, and Docker orchestration.</p>
+            <ul>
+              <li><code>vcs.py</code></li>
+              <li><code>modelservice.py</code></li>
+              <li><code>deployment.py</code></li>
+            </ul>
           </article>
           <article>
-            <span>06</span>
-            <h3>Benchmark platform</h3>
-            <p>Prototype benchmark services for datasets, metrics, submissions, users, and leaderboards.</p>
+            <span>benchmark</span>
+            <h3>Benchmark Web Platform</h3>
+            <p>Express/MongoDB backend plus a Vite React frontend for benchmarks, metrics, submissions, users, and leaderboards.</p>
+            <ul>
+              <li><code>benchmark/backend</code></li>
+              <li><code>benchmark/frontend</code></li>
+              <li>leaderboard and dashboard screens</li>
+            </ul>
           </article>
         </div>
       </section>
 
-      <section id="workflow" class="section split">
+      <section id="architecture" class="section split">
         <div>
-          <p class="eyebrow">Workflow</p>
-          <h2>Move from raw data to served predictions.</h2>
+          <p class="eyebrow">Architecture</p>
+          <h2>Python APIs where you iterate, native paths where work gets heavy.</h2>
           <p>
-            Accelera keeps experimentation explicit: every transformation and model branch is part of a graph,
-            so results can be inspected, saved, and promoted into deployment artifacts.
+            Accelera keeps the authoring interface in Python and delegates graph execution,
+            loop analysis, and generated acceleration paths to native C/C++ components when
+            the workflow benefits from lower-level control.
           </p>
         </div>
         <ol class="timeline">
           <li>
-            <strong>Prepare</strong>
-            <span>Load datasets and generate preprocessing pipelines for tabular, text, or image tasks.</span>
+            <strong>Build the graph</strong>
+            <span>Compose preprocessing, models, predictions, metrics, branches, and merges using the Python API.</span>
           </li>
           <li>
-            <strong>Experiment</strong>
-            <span>Build graph branches, run model comparisons, and capture metrics in reports.</span>
+            <strong>Execute branches</strong>
+            <span>The C++ graph backend can schedule independent branches and reduce duplicate first-node work.</span>
           </li>
           <li>
-            <strong>Optimize</strong>
-            <span>Use AutoML search and loop parallelization where runtime matters.</span>
+            <strong>Inspect outputs</strong>
+            <span>Reports and wrappers format metrics, arrays, plots, dictionaries, and pipeline diagrams for review.</span>
           </li>
           <li>
-            <strong>Deploy</strong>
-            <span>Package fitted artifacts with schema validation and request tracking.</span>
+            <strong>Promote artifacts</strong>
+            <span>Deployment commands snapshot model files, validate payload schemas, and serve predictions from containers.</span>
           </li>
         </ol>
       </section>
 
-      <section class="section showcase">
-        <div class="showcase-card">
-          <h2>Designed for practical ML systems.</h2>
+      <section class="section deep-dive">
+        <div class="section-heading wide">
+          <p class="eyebrow">Capabilities</p>
+          <h2>Detailed functionality by area.</h2>
+        </div>
+        <div class="capability-table">
+          <article>
+            <h3>Core Pipeline</h3>
+            <p>Branch multiple preprocessors and estimators, predict on test data, calculate supervised or unsupervised metrics, save/load pipelines, and generate graph reports.</p>
+          </article>
+          <article>
+            <h3>Auto Preprocessing</h3>
+            <p>Build reusable preprocessors for classical tabular datasets, text datasets, and image classification datasets, with wrappers for feature distributions and label summaries.</p>
+          </article>
+          <article>
+            <h3>AutoML</h3>
+            <p>Search classification and regression components, run SMAC optimization, warm-start from meta-features, and combine candidates with voting or stacked ensembles.</p>
+          </article>
+          <article>
+            <h3>Deployment</h3>
+            <p>Use a three-artifact model layout: preprocessing pipeline, feature selector, final model. Add JSON schema constraints and line-delimited prediction tracking.</p>
+          </article>
+          <article>
+            <h3>Code Parallelizer</h3>
+            <p>Analyze C/C++ source, convert supported Python syntax, extract loops, call classifier/generator services, validate pragmas, format output, and compile generated modules.</p>
+          </article>
+          <article>
+            <h3>Benchmark Platform</h3>
+            <p>Prototype web stack for creating benchmarks and metrics, authenticating users, submitting results, and ranking pipeline performance through dashboards.</p>
+          </article>
+        </div>
+      </section>
+
+      <section id="examples" class="section muted examples">
+        <div class="section-heading wide">
+          <p class="eyebrow">Examples</p>
+          <h2>Run the workflows that ship with the repo.</h2>
           <p>
-            Use Accelera when your pipeline needs branching, reporting, native acceleration,
-            and a clean transition from research code to reusable prediction services.
+            The <code>examples/</code> directory covers graph pipelines, saving/loading fitted graphs,
+            automatic preprocessing, AutoML tasks, code parallelization, deployment, and benchmark services.
+          </p>
+        </div>
+        <div class="example-grid">
+          <article>
+            <h3>Pipeline and reports</h3>
+            <pre><code>python examples/accpipe_demo.py
+python examples/parallel_accpipe.py
+python examples/save_load.py</code></pre>
+          </article>
+          <article>
+            <h3>Auto preprocessing</h3>
+            <pre><code>python examples/auto_preprocessing_demo.py
+python examples/auto_preprocessing_text.py
+python examples/auto_preprocessing_image_classification.py</code></pre>
+          </article>
+          <article>
+            <h3>AutoML</h3>
+            <pre><code>python examples/run_classification_task_automl.py
+python examples/run_regression_task_automl.py --time-budget 300 --n-trials 10</code></pre>
+          </article>
+          <article>
+            <h3>Parallelizer and deployment</h3>
+            <pre><code>python examples/code_parallelizer_demo.py
+python examples/deployment_demo.py</code></pre>
+          </article>
+        </div>
+      </section>
+
+      <section id="deploy" class="section showcase">
+        <div class="showcase-card">
+          <p class="eyebrow">Deployment</p>
+          <h2>Publish the website and ship model services.</h2>
+          <p>
+            This repository now includes a GitHub Pages workflow that publishes this static website
+            and builds the MkDocs documentation into <code>docs/</code>. The product code also includes
+            deployment tooling for model snapshots, Dockerized local services, Heroku containers,
+            and AWS EC2 hosts.
           </p>
         </div>
         <div class="capability-grid">
           <div>
-            <strong>Supported</strong>
-            <span>Linux core features and code parallelizer</span>
+            <strong>Website</strong>
+            <span><code>.github/workflows/ci.yaml</code> deploys <code>website/</code> through GitHub Actions.</span>
           </div>
           <div>
-            <strong>Partial</strong>
-            <span>Windows and macOS core workflows</span>
+            <strong>Model Registry</strong>
+            <span><code>vcs init</code>, <code>commit</code>, <code>status</code>, <code>log</code>, <code>show</code>, and <code>deploy</code>.</span>
           </div>
           <div>
-            <strong>Integrates</strong>
-            <span>scikit-learn, CMake, Clang, Graphviz, Docker</span>
+            <strong>Runtime Targets</strong>
+            <span>Local Docker, Heroku Container Registry, and EC2 deployment commands.</span>
+          </div>
+        </div>
+      </section>
+
+      <section class="section support">
+        <div class="section-heading wide">
+          <p class="eyebrow">Platform Support</p>
+          <h2>Know which parts are ready for each environment.</h2>
+        </div>
+        <div class="support-table" role="table" aria-label="Platform support matrix">
+          <div role="row" class="head">
+            <span role="columnheader">Platform</span>
+            <span role="columnheader">Core Pipeline</span>
+            <span role="columnheader">Code Parallelizer</span>
+            <span role="columnheader">Notes</span>
+          </div>
+          <div role="row">
+            <span role="cell">Linux</span>
+            <span role="cell">Supported</span>
+            <span role="cell">Supported</span>
+            <span role="cell">Best environment for Clang/LLVM and OpenMP workflows.</span>
+          </div>
+          <div role="row">
+            <span role="cell">Windows</span>
+            <span role="cell">Supported</span>
+            <span role="cell">Partial / unavailable</span>
+            <span role="cell">Core Python workflows work; native parallelizer support is limited.</span>
+          </div>
+          <div role="row">
+            <span role="cell">macOS</span>
+            <span role="cell">Supported</span>
+            <span role="cell">Partial / unavailable</span>
+            <span role="cell">Core workflows work; Linux is preferred for generator evaluation.</span>
           </div>
         </div>
       </section>
 
       <section id="quickstart" class="section quickstart">
-        <div class="section-heading">
+        <div class="section-heading wide">
           <p class="eyebrow">Quick Start</p>
-          <h2>Install Accelera locally.</h2>
+          <h2>Install, build, and run.</h2>
         </div>
         <div class="code-tabs" data-tabs>
           <div class="tab-list" role="tablist" aria-label="Install commands">
             <button type="button" class="active" role="tab" aria-selected="true" data-tab="linux">Linux / macOS</button>
             <button type="button" role="tab" aria-selected="false" data-tab="windows">Windows</button>
+            <button type="button" role="tab" aria-selected="false" data-tab="node">Benchmark app</button>
           </div>
           <pre data-panel="linux"><code>git clone https://github.com/Mohamed-Ashraf273/accelera.git
 cd accelera
@@ -219,7 +376,8 @@ source .venv/bin/activate
 pip install -r requirements.txt
 pip install -e .
 cmake -S . -B build
-cmake --build build --parallel</code></pre>
+cmake --build build --parallel
+pytest accelera</code></pre>
           <pre hidden data-panel="windows"><code>git clone https://github.com/Mohamed-Ashraf273/accelera.git
 cd accelera
 python -m venv .venv
@@ -228,6 +386,14 @@ pip install -r requirements.txt
 pip install -e .
 cmake -S . -B build
 cmake --build build --parallel</code></pre>
+          <pre hidden data-panel="node"><code># Requires Node.js v22.23.0
+cd benchmark/backend
+npm install
+npm run dev
+
+cd ../frontend
+npm install
+npm run dev</code></pre>
         </div>
       </section>
     </main>
@@ -238,11 +404,12 @@ cmake --build build --parallel</code></pre>
           <img src="assets/accelera-mark.svg" alt="" width="30" height="30">
           <span>Accelera</span>
         </a>
-        <p>High-performance machine learning pipeline framework.</p>
+        <p>Hybrid Python/C++ machine learning framework for pipelines, automation, acceleration, and deployment.</p>
       </div>
       <div class="footer-links">
-        <a href="https://github.com/Mohamed-Ashraf273/accelera">GitHub</a>
         <a href="docs/">Documentation</a>
+        <a href="docs/examples/">Examples</a>
+        <a href="https://github.com/Mohamed-Ashraf273/accelera">GitHub</a>
         <a href="https://github.com/Mohamed-Ashraf273/accelera/issues">Issues</a>
       </div>
     </footer>
