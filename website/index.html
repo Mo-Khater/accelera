@@ -1,0 +1,252 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta
+      name="description"
+      content="Accelera is a hybrid Python and C++ machine learning framework for graph pipelines, AutoML, auto preprocessing, model deployment, and code parallelization."
+    >
+    <title>Accelera | High-performance ML pipelines</title>
+    <link rel="icon" href="assets/favicon.svg" type="image/svg+xml">
+    <link rel="stylesheet" href="styles.css">
+  </head>
+  <body>
+    <header class="site-header" data-header>
+      <a class="brand" href="#top" aria-label="Accelera home">
+        <img src="assets/accelera-mark.svg" alt="" width="34" height="34">
+        <span>Accelera</span>
+      </a>
+      <button class="nav-toggle" type="button" aria-expanded="false" aria-controls="site-nav">
+        <span></span>
+        <span></span>
+        <span></span>
+        <span class="sr-only">Toggle navigation</span>
+      </button>
+      <nav id="site-nav" class="site-nav" aria-label="Primary navigation">
+        <a href="#platform">Platform</a>
+        <a href="#modules">Modules</a>
+        <a href="#workflow">Workflow</a>
+        <a href="#quickstart">Quick start</a>
+        <a href="https://github.com/Mohamed-Ashraf273/accelera">GitHub</a>
+      </nav>
+    </header>
+
+    <main id="top">
+      <section class="hero">
+        <div class="hero-copy">
+          <p class="eyebrow">Python ergonomics. C++ execution.</p>
+          <h1>Build, optimize, and deploy machine learning pipelines as production-ready graphs.</h1>
+          <p class="hero-text">
+            Accelera brings graph-based ML pipelines, automated preprocessing, AutoML search,
+            deployment tooling, and loop parallelization into one extensible framework.
+          </p>
+          <div class="hero-actions">
+            <a class="button primary" href="#quickstart">Start building</a>
+            <a class="button secondary" href="docs/">Read docs</a>
+          </div>
+          <dl class="hero-stats" aria-label="Project highlights">
+            <div>
+              <dt>C++20</dt>
+              <dd>native graph backend</dd>
+            </div>
+            <div>
+              <dt>Python 3.9+</dt>
+              <dd>developer API</dd>
+            </div>
+            <div>
+              <dt>Apache 2.0</dt>
+              <dd>open source</dd>
+            </div>
+          </dl>
+        </div>
+        <div class="hero-panel" aria-label="Example Accelera pipeline">
+          <div class="panel-toolbar">
+            <span></span>
+            <span></span>
+            <span></span>
+          </div>
+          <pre><code>from accelera.src.accelera_pipe.core.pipeline import Pipeline
+
+pipeline = (
+    Pipeline()
+    .input("training_data")
+    .preprocess("clean_features")
+    .branch("random_forest")
+    .branch("linear_model")
+    .metric("accuracy")
+)
+
+predictions, executed_graph = pipeline(X_train, y_train)</code></pre>
+        </div>
+      </section>
+
+      <section id="platform" class="section">
+        <div class="section-heading">
+          <p class="eyebrow">Platform</p>
+          <h2>One workspace for ML experimentation and delivery.</h2>
+          <p>
+            Accelera is designed for teams that need repeatable pipelines, faster experiments,
+            and a path from notebooks to services without rewriting the whole stack.
+          </p>
+        </div>
+        <div class="feature-grid">
+          <article>
+            <h3>Graph pipelines</h3>
+            <p>Create DAG-style workflows with preprocessing, model, prediction, metric, merge, and branch nodes.</p>
+          </article>
+          <article>
+            <h3>Parallel execution</h3>
+            <p>Run independent branches through a C++ backend and reuse fitted execution paths for inference.</p>
+          </article>
+          <article>
+            <h3>Automated reports</h3>
+            <p>Generate graph visualizations and HTML reports for model metrics, preprocessing, and comparisons.</p>
+          </article>
+          <article>
+            <h3>Custom components</h3>
+            <p>Plug in scikit-learn estimators or extend custom classifiers, regressors, clusterers, and transformers.</p>
+          </article>
+        </div>
+      </section>
+
+      <section id="modules" class="section muted">
+        <div class="section-heading">
+          <p class="eyebrow">Modules</p>
+          <h2>Built around the full ML pipeline lifecycle.</h2>
+        </div>
+        <div class="module-list">
+          <article>
+            <span>01</span>
+            <h3>Accelera Pipe</h3>
+            <p>Compose graph pipelines, compare branches, save fitted paths, and generate model reports.</p>
+          </article>
+          <article>
+            <span>02</span>
+            <h3>Auto preprocessing</h3>
+            <p>Prepare tabular, text, and image-classification datasets with reusable preprocessors and summaries.</p>
+          </article>
+          <article>
+            <span>03</span>
+            <h3>Accelera AutoML</h3>
+            <p>Search classification and regression models under time and trial budgets with warm-start support.</p>
+          </article>
+          <article>
+            <span>04</span>
+            <h3>Deployment</h3>
+            <p>Package preprocessing, feature selection, and final models behind schema-validated prediction APIs.</p>
+          </article>
+          <article>
+            <span>05</span>
+            <h3>Code parallelizer</h3>
+            <p>Analyze loops, classify OpenMP opportunities, emit parallel C++, and attach compiled accelerators.</p>
+          </article>
+          <article>
+            <span>06</span>
+            <h3>Benchmark platform</h3>
+            <p>Prototype benchmark services for datasets, metrics, submissions, users, and leaderboards.</p>
+          </article>
+        </div>
+      </section>
+
+      <section id="workflow" class="section split">
+        <div>
+          <p class="eyebrow">Workflow</p>
+          <h2>Move from raw data to served predictions.</h2>
+          <p>
+            Accelera keeps experimentation explicit: every transformation and model branch is part of a graph,
+            so results can be inspected, saved, and promoted into deployment artifacts.
+          </p>
+        </div>
+        <ol class="timeline">
+          <li>
+            <strong>Prepare</strong>
+            <span>Load datasets and generate preprocessing pipelines for tabular, text, or image tasks.</span>
+          </li>
+          <li>
+            <strong>Experiment</strong>
+            <span>Build graph branches, run model comparisons, and capture metrics in reports.</span>
+          </li>
+          <li>
+            <strong>Optimize</strong>
+            <span>Use AutoML search and loop parallelization where runtime matters.</span>
+          </li>
+          <li>
+            <strong>Deploy</strong>
+            <span>Package fitted artifacts with schema validation and request tracking.</span>
+          </li>
+        </ol>
+      </section>
+
+      <section class="section showcase">
+        <div class="showcase-card">
+          <h2>Designed for practical ML systems.</h2>
+          <p>
+            Use Accelera when your pipeline needs branching, reporting, native acceleration,
+            and a clean transition from research code to reusable prediction services.
+          </p>
+        </div>
+        <div class="capability-grid">
+          <div>
+            <strong>Supported</strong>
+            <span>Linux core features and code parallelizer</span>
+          </div>
+          <div>
+            <strong>Partial</strong>
+            <span>Windows and macOS core workflows</span>
+          </div>
+          <div>
+            <strong>Integrates</strong>
+            <span>scikit-learn, CMake, Clang, Graphviz, Docker</span>
+          </div>
+        </div>
+      </section>
+
+      <section id="quickstart" class="section quickstart">
+        <div class="section-heading">
+          <p class="eyebrow">Quick Start</p>
+          <h2>Install Accelera locally.</h2>
+        </div>
+        <div class="code-tabs" data-tabs>
+          <div class="tab-list" role="tablist" aria-label="Install commands">
+            <button type="button" class="active" role="tab" aria-selected="true" data-tab="linux">Linux / macOS</button>
+            <button type="button" role="tab" aria-selected="false" data-tab="windows">Windows</button>
+          </div>
+          <pre data-panel="linux"><code>git clone https://github.com/Mohamed-Ashraf273/accelera.git
+cd accelera
+python -m venv .venv
+source .venv/bin/activate
+pip install -r requirements.txt
+pip install -e .
+cmake -S . -B build
+cmake --build build --parallel</code></pre>
+          <pre hidden data-panel="windows"><code>git clone https://github.com/Mohamed-Ashraf273/accelera.git
+cd accelera
+python -m venv .venv
+.\.venv\Scripts\Activate.ps1
+pip install -r requirements.txt
+pip install -e .
+cmake -S . -B build
+cmake --build build --parallel</code></pre>
+        </div>
+      </section>
+    </main>
+
+    <footer class="site-footer">
+      <div>
+        <a class="brand" href="#top">
+          <img src="assets/accelera-mark.svg" alt="" width="30" height="30">
+          <span>Accelera</span>
+        </a>
+        <p>High-performance machine learning pipeline framework.</p>
+      </div>
+      <div class="footer-links">
+        <a href="https://github.com/Mohamed-Ashraf273/accelera">GitHub</a>
+        <a href="docs/">Documentation</a>
+        <a href="https://github.com/Mohamed-Ashraf273/accelera/issues">Issues</a>
+      </div>
+    </footer>
+
+    <script src="script.js"></script>
+  </body>
+</html>
