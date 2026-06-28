@@ -1,48 +1,77 @@
 # Benchmark Platform
 
-**Status**: 🚧 Under Implementation
-
-The Benchmark Platform will provide a competitive environment for ML practitioners to discover, share, and compare optimal pipelines.
+The Benchmark Platform is a web application for managing datasets, metrics,
+submissions, users, dashboards, and leaderboards. It is implemented as a Node.js
+backend plus a Vite React frontend under `benchmark/`.
 
 ## Overview
 
-The Benchmark Platform creates a community-driven competition system where users can submit ML pipelines, compete on public datasets, and learn from top-performing solutions. It combines elements of competitive ML platforms with collaborative learning.
+The platform supports the workflow around evaluating ML pipelines: define a
+benchmark, define metrics, submit results, and compare submissions through a
+leaderboard-oriented UI.
 
-## Planned Features
+## Source Layout
 
-- **Public Datasets**: Curated collection of benchmark datasets
-- **Leaderboards**: Track and compare pipeline performance
-- **Competitions**: Time-limited challenges with prizes
-- **Pipeline Sharing**: Share and reuse successful pipelines
-- **Community Learning**: Learn from top performers
-- **Multi-Metric Ranking**: Rank by accuracy, speed, and efficiency
+```text
+benchmark/
+  backend/
+    server.js
+    routes/
+    schemas/
+    validations/
+    middleware/
+    scripts/
+  frontend/
+    src/
+      components/
+      App.jsx
+      main.jsx
+```
 
+## Backend
 
-## Current Status
+The backend is an Express application with route modules for:
 
-This module is in early development. Basic structure and API design are complete, with web platform development in progress.
+- Benchmarks
+- Metrics
+- Submissions
+- Users
 
-## Expected Timeline
+It includes schemas, validation logic, authentication middleware, admin
+middleware, and scoring utility scripts.
 
-- **Q2 2026**: Dataset repository and submissions
-- **Q3 2026**: Competitions and team features  
-- **Q4 2026**: Production-ready release
+## Frontend
+
+The frontend is a Vite React app with screens and components for:
+
+- Home
+- Login and signup
+- Dashboard and admin dashboard
+- Benchmarks
+- Metrics
+- Submission display
+- Leaderboard
+
+## Run Locally
+
+This project requires Node.js `v22.23.0`.
+
+```bash
+cd benchmark/backend
+npm install
+npm run dev
+```
+
+In another terminal:
+
+```bash
+cd benchmark/frontend
+npm install
+npm run dev
+```
 
 ## Related Modules
 
-- [Core Pipeline](core-pipeline.md) - Build pipelines for submission
-- [AutoML Module](automl.md) - Auto-generate competitive solutions (Coming Soon)
-- [Deployment Module](deployment.md) - Deploy winning solutions (Coming Soon)
-
-## Questions?
-
-If you have questions or suggestions about the Benchmark Platform:
-
-1. Open an issue on [GitHub](https://github.com/Mohamed-Ashraf273/accelera/issues)
-2. Join the discussion on planned features
-
----
-
-**Last Updated**: January 2026
-
-**Status**: Under Implementation 🚧
+- [AutoML](automl.md) - Generate and evaluate candidate model pipelines.
+- [Core Pipeline](core-pipeline.md) - Build graph pipelines for experiments.
+- [Deployment](deployment.md) - Serve selected model artifacts.

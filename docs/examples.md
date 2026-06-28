@@ -6,7 +6,7 @@ Practical examples demonstrating Accelera's available features. All examples are
 
 - [Core Pipeline Examples](#core-pipeline-examples)
 - [Code Parallelizer Examples](#code-parallelizer-examples)
-- [Features Under Implementation](#features-under-implementation)
+- [Additional Implemented Workflows](#additional-implemented-workflows)
 
 ## Core Pipeline Examples
 
@@ -322,66 +322,58 @@ print(f"Output saved to: converted_code.cpp")
 
 ---
 
-## Features Under Implementation
+## Additional Implemented Workflows
 
-The following features are currently being developed and examples will be added when available.
+The repository includes examples for AutoML, deployment, automatic
+preprocessing, benchmark services, and code parallelization.
 
-### AutoML Module (Coming Soon)
+### AutoML Classification and Regression
 
-**File**: `examples/automl_demo.py` (Preview - Not fully functional)
+Run the AutoML examples:
 
-Automatically discover optimal pipelines for your datasets:
-
-```python
-import os
-import pandas as pd
-
-from accelera.src.automl.core.agent import AutoAccelera
-
-# AutoML agent for automatic pipeline generation
-agent = AutoAccelera()
-
-# Load dataset
-current_dir = os.path.dirname(__file__)
-df = pd.read_csv(os.path.join(current_dir, "Titanic-Dataset.csv"))
-
-# Automatically find best pipeline
-best_pipeline = agent.get_pipeline(df, "Survived")
-
-print("Best pipeline discovered!")
+```bash
+python examples/run_classification_task_automl.py
+python examples/run_regression_task_automl.py --time-budget 300 --n-trials 10
 ```
 
-**Status**: Under implementation - API may change
+These examples use the implemented `accelera.src.accelera_automl` modules for
+classification, regression, optimization, evaluation, and model selection.
 
 ---
 
-### Deployment Module (Coming Soon)
+### Deployment Module
 
-Deploy and track ML models in production.
+Run the complete deployment demonstration:
 
-```python
-# Example API (not yet available)
-from accelera.src.deployment import ModelDeployer
-
-deployer = ModelDeployer()
-deployer.deploy(model, name="production_model", version="1.0.0")
+```bash
+python examples/deployment_demo.py
 ```
 
-### Benchmark Platform (Coming Soon)
+The deployment module includes model version control, schema validation,
+prediction tracking, serving, Docker orchestration, Heroku deployment commands,
+and AWS EC2 deployment commands.
 
-Compete with the community to find the best ML pipelines.
+---
 
-```python
-# Example API (not yet available)
-from accelera.src.benchmark import BenchmarkSubmission
+### Benchmark Platform
 
-submission = BenchmarkSubmission(
-    dataset_id="titanic",
-    pipeline=best_pipeline,
-    metrics={"accuracy": 0.87}
-)
-submission.submit()
+Run the benchmark backend and frontend:
+
+```bash
+cd benchmark/backend
+npm install
+npm run dev
 ```
+
+```bash
+cd benchmark/frontend
+npm install
+npm run dev
+```
+
+The benchmark platform includes Express routes, schemas, validations,
+authentication middleware, React screens, dashboards, benchmark forms, metric
+forms, and leaderboard components.
 
 ## Next Steps
 

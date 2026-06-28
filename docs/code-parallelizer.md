@@ -1,7 +1,5 @@
 # Code Parallelizer
 
-**Status**: 🚧 Under Implementation
-
 The Code Parallelizer is a powerful feature that analyzes C/C++ source code to extract loop structures using Clang's Abstract Syntax Tree (AST).
 
 !!! warning "Platform Availability"
@@ -32,12 +30,11 @@ It explains how the generator works, how Python inputs are converted to C++,
 how generated pragmas are validated, and how the latest classifier, pragma
 accuracy, compile/run, and latency metrics are measured.
 
-## Expected Timeline
+## Implementation
 
-- **Q1 2026**: Complete API reference documentation
-- **Q2 2026**: Advanced usage tutorials and examples
-- **Q2 2026**: ML model integration guide
-- **Q3 2026**: Full documentation with case studies
+The implementation is available in `accelera/src/parallelizer/` and supporting
+C++ AST utilities under `src/ast/`. The repository also includes tests,
+evaluation data, generated parallelized files, and an OpenMP generator report.
 
 ## How You Can Help
 
@@ -64,8 +61,3 @@ If you have questions or suggestions about the Code Parallelizer:
 1. Open an issue on [GitHub](https://github.com/Mohamed-Ashraf273/accelera/issues)
 2. Check existing examples in the `examples/` directory
 
----
-
-**Last Updated**: January 2026
-
-**Status**: Under Implementation 🚧

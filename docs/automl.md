@@ -1,79 +1,60 @@
 # AutoML Module
 
-**Status**: 🚧 Under Implementation
-
-The AutoML Module will provide automatic machine learning pipeline generation and optimization.
+The Accelera AutoML module provides classification and regression model search,
+evaluation, warm-start metadata, optimizer integration, and ensemble utilities.
+It lives under `accelera/src/accelera_automl/`.
 
 ## Overview
 
-The AutoML Module is designed to automatically discover optimal ML pipelines for your datasets. It will use reinforcement learning and genetic algorithms to explore the space of possible preprocessing steps, model architectures, and hyperparameters, making it easy to find high-performing solutions without manual tuning.
+Accelera AutoML is designed to automate practical model selection workflows. It
+searches candidate estimators, evaluates them under configurable budgets, stores
+benchmark results, and can combine strong candidates through voting or stacked
+ensembles.
 
-## Planned Features
+## Key Components
 
-- **Automatic Pipeline Generation**: Automatically find the best pipeline for your dataset
-- **Hyperparameter Optimization**: Intelligently tune model parameters
-- **Smart Search**: Use reinforcement learning for efficient exploration
-- **Neural Architecture Search**: Discover optimal neural network architectures
-- **Multi-Objective Optimization**: Balance accuracy, speed, and model size
+- **Core orchestration**: `accelera/src/accelera_automl/core/automl.py`
+- **Classification tasks**: `classification.py` and
+  `components/classification.py`
+- **Regression tasks**: `regression.py` and `components/regression.py`
+- **Optimization**: `optimization/smac_optimizer.py`
+- **Meta-learning warm starts**: `meta_learning/warmstart.py`,
+  `meta_learning/metafeatures.py`, and bundled JSON metadata
+- **Evaluation utilities**: `evaluation.py` and `base_evaluation.py`
+- **Ensembles**: `stacked_ensemble.py` and `stacked_ensemble_regression.py`
+- **AutoML benchmark integration**:
+  `automlbenchmark_custom_myautoml/`
 
-## Example Usage (Preview)
+## Capabilities
 
-```python
-import pandas as pd
-from accelera.src.automl.core.agent import AutoAccelera
+- Run classification and regression searches.
+- Configure time budgets and trial counts.
+- Evaluate candidate pipelines with common metrics.
+- Warm-start search from dataset meta-features.
+- Build voting and stacked ensemble models.
+- Reproduce benchmark experiments from included benchmark configuration files.
 
-# Load your dataset
-df = pd.read_csv("data.csv")
+## Example Commands
 
-# Create AutoML agent
-agent = AutoAccelera()
-
-# Automatically find best pipeline
-best_pipeline = agent.get_pipeline(df, target_column="label")
-
-# Use the discovered pipeline
-predictions, executed_graph = best_pipeline(X_test, y_test)
+```bash
+python examples/run_classification_task_automl.py
+python examples/run_regression_task_automl.py --time-budget 300 --n-trials 10
 ```
 
-**Note**: This feature is currently under development. The API shown above is a preview and may change.
+## Benchmark Assets
 
-## Current Status
+The repository includes benchmark configuration and result artifacts:
 
-This module is in early development. Basic structure and API design are complete, with implementation of the core algorithms in progress.
+- `accelera/src/accelera_automl/automlbenchmark_custom_myautoml/`
+- `docs/accelera_automl_benchmark_results/`
+- `data/accelera_automl/`
 
-## Expected Timeline
-
-- **Q2 2026**: Basic pipeline search
-- **Q3 2026**: Advanced optimization features
-- **Q4 2026**: Production-ready release
-
-## How You Can Help
-
-We welcome contributions! Areas where you can help:
-
-1. **Algorithm Development**: Implement RL algorithms for pipeline search
-2. **Search Space Design**: Define effective preprocessing and model combinations
-3. **Benchmarking**: Test on various datasets
-4. **Documentation**: Write tutorials and examples
-5. **Testing**: Report issues and suggest improvements
-
-See [Contributing](contributing.md) for more details.
+These files support reproducible classification and regression comparisons
+against common AutoML frameworks.
 
 ## Related Modules
 
-- [Core Pipeline](core-pipeline.md) - The underlying pipeline framework
-- [Deployment Module](deployment.md) - Deploy AutoML-discovered pipelines (Coming Soon)
-- [Benchmark Platform](benchmark.md) - Compare AutoML results (Coming Soon)
-
-## Questions?
-
-If you have questions or suggestions about the AutoML Module:
-
-1. Open an issue on [GitHub](https://github.com/Mohamed-Ashraf273/accelera/issues)
-2. Join the discussion on planned features
-
----
-
-**Last Updated**: January 2026
-
-**Status**: Under Implementation 🚧
+- [Core Pipeline](core-pipeline.md) - Graph pipeline execution.
+- [Auto Preprocessing examples](examples.md) - Dataset preparation workflows.
+- [Deployment Module](deployment.md) - Package selected models as services.
+- [Benchmark Platform](benchmark.md) - Web platform for comparing results.

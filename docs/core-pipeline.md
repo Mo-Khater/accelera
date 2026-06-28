@@ -852,5 +852,5 @@ report.execute()
 ## Related Modules
 
 - [Code Parallelizer](code-parallelizer.md) - Extract loops from C/C++ code
-- [AutoML Module](automl.md) - Automatic pipeline generation (Coming Soon)
-- [Deployment Module](deployment.md) - Model deployment (Coming Soon)
+- [AutoML Module](automl.md) - Classification and regression model search
+- [Deployment Module](deployment.md) - Model serving and deployment workflows
