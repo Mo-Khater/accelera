@@ -1,0 +1,1419 @@
+\documentclass[12pt,a4paper,oneside]{report}
+
+\usepackage[margin=1in,headheight=22pt,headsep=0.28in]{geometry}
+\usepackage[T1]{fontenc}
+\usepackage[utf8]{inputenc}
+\usepackage{lmodern}
+\usepackage{microtype}
+\usepackage{booktabs}
+\usepackage{array}
+\usepackage{longtable}
+\usepackage{tabularx}
+\usepackage{multirow}
+\usepackage{enumitem}
+\usepackage[table]{xcolor}
+\usepackage{xurl}
+\usepackage{hyperref}
+\usepackage{listings}
+\usepackage{amsmath}
+\usepackage{amssymb}
+\usepackage{graphicx}
+\usepackage{float}
+\usepackage{placeins}
+\usepackage{needspace}
+\usepackage[font=small,labelfont=bf]{caption}
+\usepackage{subcaption}
+\usepackage{fancyhdr}
+\usepackage{titlesec}
+\usepackage{chngcntr}
+\usepackage{tocloft}
+\usepackage{etoolbox}
+
+\definecolor{covergreen}{RGB}{35,107,72}
+\definecolor{accentgreen}{RGB}{224,239,228}
+\definecolor{warningyellow}{RGB}{252,244,210}
+
+\hypersetup{
+  colorlinks=true,
+  linkcolor=blue!45!black,
+  citecolor=blue!45!black,
+  urlcolor=blue!45!black,
+  pdftitle={Accelera: Graph-Based ML Pipelines, Benchmarking, and Multi-Target Model Deployment},
+  pdfauthor={Mazen Adel}
+}
+
+\setlength{\parindent}{0.18in}
+\setlength{\parskip}{0.15em}
+
+\titleformat{\chapter}[hang]
+  {\normalfont\bfseries\fontsize{22}{26}\selectfont\raggedright}
+  {\chaptername\ \thechapter:}{0.5em}{}
+\titleformat{name=\chapter,numberless}[hang]
+  {\normalfont\bfseries\fontsize{22}{26}\selectfont}{}{0pt}{}
+\titlespacing*{\chapter}{0pt}{0pt}{18pt}
+\titleformat{\section}
+  {\normalfont\bfseries\fontsize{16}{20}\selectfont}
+  {\thesection}{0.6em}{}
+\titlespacing*{\section}{0pt}{15pt}{7pt}
+\titleformat{\subsection}
+  {\normalfont\bfseries\fontsize{13}{16}\selectfont}
+  {\thesubsection}{0.6em}{}
+\titlespacing*{\subsection}{0pt}{11pt}{5pt}
+
+\pagestyle{fancy}
+\fancyhf{}
+\fancyhead[R]{\textbf{Accelera} \textcolor{covergreen}{2026}}
+\fancyfoot[R]{\thepage\,|\,Page}
+\renewcommand{\headrulewidth}{0.5pt}
+\renewcommand{\footrulewidth}{0.3pt}
+\fancypagestyle{plain}{\pagestyle{fancy}}
+
+\counterwithin{figure}{chapter}
+\counterwithin{table}{chapter}
+\renewcommand{\lstlistingname}{Algorithm}
+\renewcommand{\lstlistlistingname}{List of Algorithms}
+\setlength{\emergencystretch}{2em}
+\raggedbottom
+
+\lstdefinestyle{paperpython}{
+  basicstyle=\ttfamily\footnotesize,
+  breaklines=true,
+  frame=single,
+  columns=fullflexible,
+  keepspaces=true,
+  showstringspaces=false,
+  keywordstyle=\color{blue!55!black},
+  commentstyle=\color{green!35!black}
+}
+
+\lstdefinestyle{algostyle}{
+  basicstyle=\rmfamily\scriptsize,
+  backgroundcolor=\color{white},
+  frame=tb,
+  rulecolor=\color{black},
+  framerule=0.45pt,
+  framesep=3pt,
+  xleftmargin=0pt,
+  xrightmargin=0pt,
+  numbers=left,
+  numberstyle=\scriptsize\rmfamily,
+  numbersep=5pt,
+  columns=fullflexible,
+  keepspaces=true,
+  showstringspaces=false,
+  breaklines=true,
+  breakatwhitespace=false,
+  breakautoindent=false,
+  breakindent=0pt,
+  captionpos=t,
+  aboveskip=0.8em,
+  belowskip=0.8em
+}
+
+\lstset{style=paperpython}
+\renewcommand{\thelstnumber}{\arabic{lstnumber}:}
+
+\newcommand{\systemname}{Accelera}
+\newcommand{\modulepath}[1]{\texttt{#1}}
+
+\begin{document}
+
+% -----------------------------------------------------------------------------
+% TITLE PAGE
+% -----------------------------------------------------------------------------
+\begin{titlepage}
+\thispagestyle{empty}
+\begin{center}
+
+\includegraphics[width=0.12\textwidth]{../imgs/CU_logo.png}\\
+{\fontsize{12}{14}\selectfont Cairo University}\\
+{\fontsize{12}{14}\selectfont Faculty of Engineering}\\
+{\fontsize{12}{14}\selectfont Department of Computer Engineering}\\
+
+\vspace{0.8cm}
+
+{\bfseries\fontsize{22}{26}\selectfont Accelera: Graph-Based ML Pipelines, Benchmarking Platform, and Multi-Target Model Deployment}
+
+\vspace{0.35cm}
+
+{\fontsize{16}{20}\selectfont Pipeline Parallelism, Web-Based Leaderboards, and Containerized Deployments}
+
+\vspace{0.8cm}
+
+\includegraphics[width=0.22\textwidth]{../imgs/accelera.png}
+
+\vspace{0.7cm}
+
+{\fontsize{12}{14}\selectfont
+A Graduation Project Individual Report Submitted\\
+to\\[0.15cm]
+Faculty of Engineering, Cairo University\\[0.15cm]
+in Partial Fulfillment of the Requirements for the Degree\\[0.15cm]
+of\\[0.15cm]
+Bachelor of Science in Computer Engineering.
+}
+
+\vspace{0.8cm}
+
+{\bfseries\fontsize{16}{18}\selectfont Presented by}
+
+\vspace{0.25cm}
+
+{\fontsize{14}{16}\selectfont Mazen Adel}\\[0.15cm]
+{\fontsize{12}{14}\selectfont Student ID: 9220625}
+
+\vspace{0.6cm}
+
+{\bfseries\fontsize{16}{18}\selectfont Supervised by}
+
+\vspace{0.25cm}
+
+{\fontsize{14}{16}\selectfont Dr. Salma Abdel Monem}
+
+\vspace{0.45cm}
+
+{\fontsize{12}{14}\selectfont June 2026}
+
+\vfill
+
+{\fontsize{11}{14}\selectfont
+All rights reserved. This report may not be reproduced in whole or in part,
+by photocopying or other means, without the permission of the author or department.
+}
+
+\end{center}
+\end{titlepage}
+
+% -----------------------------------------------------------------------------
+% ABSTRACT
+% -----------------------------------------------------------------------------
+\pagenumbering{arabic}
+\setcounter{page}{2}
+
+\begin{abstract}
+This report presents the individual design, implementation, verification, and learning journey behind my contributions to three important parts of the \systemname{} framework: the Pipeline Module, the Benchmark Module, and the Deployment Module. My work focused on making \systemname{} more complete as an engineering system, not only as a collection of machine-learning algorithms. The contributions described in this report cover internal execution behavior, user-facing platform features, authentication-related workflows, dashboard visibility, and the final deployment stage that transforms trained models into usable services.
+
+Within the Pipeline Module, I contributed to the C++ back-end execution engine supporting branching workflows, topological sorting, DAG constraints, and duplicate-node optimization. In particular, the \modulepath{runParallel} functionality was a shared contribution between Mohamed Ashraf and me, focusing on thread-safe graph execution, dependency-aware branch scheduling, counting semaphores, and controlled memory release. Alongside this shared parallel-execution work, I also implemented a native Merge Node supporting class and probability-based majority voting strategies.
+
+Within the Benchmark Module, I developed a Node.js REST API using Express and MongoDB to handle secure user authentication (JWT and bcrypt), dataset uploads, leaderboard management, and validation of submitted predictions against hidden ground truths. I also built a React frontend consisting of dedicated User and Admin Dashboards for task filtering, leaderboard viewing, and administrator-level user management.
+
+Finally, the Deployment Module forms the main contribution of this individual work. It integrates a production-ready FastAPI web server featuring runtime data validation via Great Expectations, a request tracking and telemetry logging layer, a lightweight model Version Control System (VCS) with SHA-1 hash commits and rollback support, and an automated deployment engine targeting local Docker, Heroku, and remote AWS EC2 instances over SSH. This module was the most technically demanding part of my work because it required connecting machine-learning artifacts, configuration files, server-side APIs, Docker containers, command-line workflows, and remote deployment environments into one coherent system.
+\end{abstract}
+
+% -----------------------------------------------------------------------------
+% TABLES OF CONTENTS & LISTS
+% -----------------------------------------------------------------------------
+\tableofcontents
+\listoffigures
+\listoftables
+\clearpage
+
+% -----------------------------------------------------------------------------
+% CHAPTER 1: INTRODUCTION
+% -----------------------------------------------------------------------------
+\chapter{Introduction}
+\label{chap:introduction}
+
+\section{Project Context and Goals}
+Developing and deploying machine learning pipelines in professional settings requires solving challenges that span different parts of the software lifecycle. A simple, linear script is often sufficient for training a single model on a local workstation. However, a production-grade machine learning system must evaluate multiple models, preprocessing methods, and hyperparameters, run experiments fairly, track version histories, and host models in scalable environments.
+
+My individual work was motivated by this gap between a working experiment and a complete usable system. I wanted my contribution to help \systemname{} feel less like a narrow model-building prototype and more like a practical platform. This meant working on features that improve how workflows execute internally, how benchmark information is presented to users, how access is separated between normal users and administrators, and how trained models can eventually be packaged and served outside the training environment.
+
+The work therefore covered both backend-oriented and user-facing responsibilities. The Pipeline work required thinking about graph execution, dependency order, merging outputs, and parallel scheduling. The Benchmark work required thinking about dashboards, user journeys, login and signup flows, and role-based interfaces. The Deployment work required learning how models, files, servers, containers, APIs, and commands interact. Together, these contributions helped move \systemname{} toward a more complete end-to-end machine-learning workflow.
+
+\systemname{} addresses these challenges by organizing the workflow into separate but integrated modules. This individual work focuses on three essential layers:
+\begin{enumerate}
+    \item \textbf{The Execution Layer (Pipeline Module):} Runs multi-branch pipelines efficiently on multi-core machines, handling dependencies, branching, merging, and memory management.
+    \item \textbf{The Collaboration Layer (Benchmark Module):} Provides a central, secure platform where different developers can test their models on the same datasets under the same evaluation metrics.
+    \item \textbf{The Serving Layer (Deployment Module):} Acts as the main focus of this work, responsible for packaging trained models, validating input data, saving prediction histories, and pushing services to container platforms.
+\end{enumerate}
+
+\section{My Contributions}
+As part of the \systemname{} development team, I designed, implemented, and verified the following components:
+\begin{itemize}[leftmargin=*]
+    \item \textbf{Pipeline Module:} Developed the native C++ \modulepath{MergeNode} class and voting algorithms. Contributed with Mohamed Ashraf to the concurrent graph runner (\modulepath{runParallel}), including dependency-aware scheduling, semaphores, GIL management, and memory optimizations.
+    \item \textbf{Benchmark Module:} Programmed the Node.js Express backend and MongoDB schemas for users, benchmarks, and submissions. Designed the React dashboards for users and administrators.
+    \item \textbf{Deployment Module:} Designed and built the complete model serving system, which includes the FastAPI server, Uvicorn server, Great Expectations validation layer, telemetry logger, and CLI deployment tools for Docker, Heroku, and AWS EC2. Created the custom Model Version Control (VCS) subsystem.
+\end{itemize}
+
+These contributions were connected by one common goal: improving the practical value of \systemname{}. The Merge Node and run-parallel work improved the execution layer by making graph workflows more flexible and more capable. The dashboards and authentication pages improved the platform layer by making benchmark interaction clearer for users and administrators. The Deployment Module improved the delivery layer by making it possible to move from trained models and saved artifacts toward a real API service. This report discusses these areas as technical work, but also as an individual engineering journey in which each module required a different way of thinking.
+
+\section{Report Organization}
+The rest of this report is organized as follows: Chapter~\ref{chap:literature-survey} reviews the relevant background and related technologies. Chapter~\ref{chap:system-design} describes the architecture, schemas, design assumptions, and module boundaries of the three contribution areas. Chapter~\ref{chap:methodology} explains the implementation details, algorithms, and technical decisions behind the Pipeline, Benchmark, and Deployment contributions. Chapter~\ref{chap:verification} presents testing and verification. The later chapters align the individual report with the main GP book by documenting the development platforms, use cases, practical user workflows, personal engineering reflection, and future extensions.
+
+\section{Individual Project Outcomes}
+My work contributed to three outcomes within the complete \systemname{} project. These outcomes are aligned with the main GP book, but they are described here from my individual implementation perspective.
+
+\begin{table}[H]
+\centering
+\small
+\caption{My individual outcomes within \systemname{}}
+\label{tab:individual-outcomes}
+\begin{tabularx}{\textwidth}{p{0.24\textwidth}p{0.33\textwidth}X}
+\toprule
+\textbf{Outcome} & \textbf{Implemented contribution} & \textbf{Value to the project} \\
+\midrule
+Graph execution completeness &
+\modulepath{MergeNode} and shared \modulepath{runParallel} graph execution work &
+Improves graph workflows by allowing branch outputs to be combined and independent branches to run concurrently while preserving dependency correctness. \\
+\midrule
+Benchmark platform completeness &
+Authentication routes, MongoDB schemas, user dashboard, admin dashboard, and role-aware frontend flow &
+Turns the benchmark prototype into a usable platform where users can register, log in, inspect their work, submit predictions, and where administrators can manage platform-level actions. \\
+\midrule
+Deployment lifecycle completeness &
+FastAPI serving, Great Expectations validation, telemetry tracking, deployment VCS, Docker packaging, Heroku support, and EC2 orchestration &
+Extends \systemname{} beyond training and evaluation by making trained artifacts reachable through a validated API service. \\
+\bottomrule
+\end{tabularx}
+\end{table}
+
+These outcomes are connected by a common theme: they make \systemname{} less dependent on manual scripts. The Pipeline contribution makes execution more structured, the Benchmark contribution makes evaluation more organized, and the Deployment contribution makes model delivery more repeatable.
+
+% -----------------------------------------------------------------------------
+% CHAPTER 2: LITERATURE SURVEY
+% -----------------------------------------------------------------------------
+\chapter{Literature Survey}
+\label{chap:literature-survey}
+
+\section{Machine Learning Pipeline Abstractions}
+Machine learning pipelines are commonly used to organize workflows. The most popular pipeline system is the linear model in \modulepath{scikit-learn}, which chains transformers and estimators together. However, a linear pipeline cannot naturally represent complex, non-linear workflows. For example, if a developer wants to compare three scaling methods and two classifiers, a linear system requires building six separate pipelines. This duplicates both code and execution time, as early steps must run repeatedly. Modern systems address this by representing workflows as Directed Acyclic Graphs (DAGs), where nodes represent computational steps and edges represent data dependencies.
+
+\section{Automatic Concurrency and GIL Release}
+In Python-based frameworks, running pipelines concurrently is limited by the Global Interpreter Lock (GIL). The GIL prevents multiple threads from executing Python bytecodes at the same time. To achieve true parallel execution on multi-core systems, heavy computations must be offloaded to compiled native languages like C++ using binding tools like \modulepath{pybind11}. When executing C++ code, the Python GIL can be released (\modulepath{py::gil\_scoped\_release}), allowing separate native threads to run independently on different CPU cores.
+
+\section{Web Serving and Data Quality Layers}
+Model serving requires turning saved binaries (such as pickle files) into active web endpoints. FastAPI is a common choice for this, utilizing asynchronous loops to handle concurrent requests. However, raw inputs submitted by users can contain invalid formats or values that cause models to crash. Data validation tools like Great Expectations help prevent this. They define schema rules (such as expected columns, types, and range boundaries) to check data quality at runtime before sending inputs to the model.
+
+\section{Multi-Target Deployment Platforms}
+Deploying serving containers involves different target architectures:
+\begin{itemize}[leftmargin=*]
+    \item \textbf{Local Docker:} Provides local isolation, ensuring the service runs identically in development and production.
+    \item \textbf{Heroku Container Registry:} Simplifies cloud hosting by managing HTTP routing and container scaling automatically.
+    \item \textbf{AWS EC2:} Offers raw virtual machines in the cloud, requiring custom SSH management, codebase synchronization, remote container building, and manual firewall configuration.
+\end{itemize}
+
+\section{Related Deployment and Benchmarking Platforms}
+Several public or paid platforms overlap with parts of my work. Heroku, Render, Railway, Google Cloud Run, and AWS EC2 can host web services or containers. Hugging Face Spaces can host model demos. Kaggle and similar competition platforms provide leaderboards and dataset-based comparison. These tools are useful, but they usually solve only one layer of the workflow.
+
+The Deployment module in \systemname{} has a different role. It is not a general cloud provider. Instead, it prepares the machine-learning service itself: it loads model artifacts, reads \modulepath{config.json}, validates request payloads, exposes FastAPI endpoints, logs telemetry, creates deployment snapshots, and then connects the prepared service to local Docker, Heroku, or EC2. In other words, my module complements hosting platforms by building the ML-serving package that those platforms can run.
+
+\begin{table}[H]
+\centering
+\small
+\caption{Related platforms and the role of my contribution}
+\label{tab:individual-related-platforms}
+\begin{tabularx}{\textwidth}{p{0.23\textwidth}p{0.34\textwidth}X}
+\toprule
+\textbf{Platform type} & \textbf{Typical responsibility} & \textbf{What my work adds in \systemname{}} \\
+\midrule
+Application hosting platforms &
+Run a web service or container after the application is prepared. &
+Generates and prepares the FastAPI model service, Dockerfile, model files, validation rules, and target-specific commands. \\
+\midrule
+Virtual machines such as EC2 &
+Provide raw server access and full infrastructure control. &
+Automates SSH file synchronization, remote Docker build/run steps, health checks, logs, and stop commands. \\
+\midrule
+Hosted ML demo platforms &
+Provide a public interface for demos or notebooks. &
+Focuses on reproducible deployment from project artifacts rather than one-off demos. \\
+\midrule
+Competition and benchmark systems &
+Host datasets, metrics, submissions, and leaderboards. &
+Contributes a project-specific benchmark platform with authentication, submission validation, and role-aware dashboards. \\
+\bottomrule
+\end{tabularx}
+\end{table}
+
+% -----------------------------------------------------------------------------
+% CHAPTER 3: SYSTEM DESIGN AND ARCHITECTURE
+% -----------------------------------------------------------------------------
+\chapter{System Design and Architecture}
+\label{chap:system-design}
+
+\section{Overview and Design Assumptions}
+This chapter follows the same architectural direction as the main GP book, but focuses on the modules where I contributed directly. My work sits across three connected stages of the overall \systemname{} lifecycle: graph execution, benchmark interaction, and deployment.
+
+\begin{figure}[H]
+\centering
+\makebox[\textwidth][c]{%
+\includegraphics[width=1.08\textwidth,height=0.50\textheight,keepaspectratio]{../imgs/block_diagram.png}
+}
+\caption{Overall Accelera architecture and the lifecycle stages related to my work}
+\label{fig:individual_block_diagram}
+\end{figure}
+
+The block diagram shows why my contributions are connected even though they belong to different modules. The Pipeline Module controls how graph workflows execute. The Benchmark Module supports fair comparison and user-facing evaluation. The Deployment Module consumes saved model artifacts and turns them into services. Together, these modules help move from local experimentation toward reusable, comparable, and reachable machine-learning results.
+
+\begin{table}[H]
+\centering
+\small
+\caption{Design assumptions affecting my contribution areas}
+\label{tab:individual-design-assumptions}
+\begin{tabularx}{\textwidth}{p{0.24\textwidth}X}
+\toprule
+\textbf{Area} & \textbf{Assumption} \\
+\midrule
+Pipeline execution &
+Machine-learning workflows can be represented as directed acyclic graphs where a node can execute only after all parent dependencies have completed. Independent ready nodes may run concurrently if shared data remains valid. \\
+\midrule
+Merge and voting &
+Prediction branches may produce either direct labels or probability arrays, so the merge logic must handle output shape differences and return deterministic results. \\
+\midrule
+Benchmark platform &
+Benchmark creators provide valid dataset, test-set, target-label, and metric information, while users submit prediction files that can be validated against the hidden target file. \\
+\midrule
+Deployment module &
+The selected model or executed graph has already produced serializable artifacts and a valid \modulepath{config.json}. Docker is available locally or on the target server, and remote EC2 deployment receives a reachable host, SSH user, and correct network settings. \\
+\bottomrule
+\end{tabularx}
+\end{table}
+
+\section{End-to-End Role of My Modules}
+From an end-to-end perspective, the user's output may follow more than one path. A selected AutoML model, a fitted graph path, or a manually trained model can all become deployment inputs if the correct artifacts and configuration are produced. The Benchmark Platform can be used separately for evaluation and comparison, while the Deployment Module can be used to expose a selected model through an HTTP service.
+
+\begin{table}[H]
+\centering
+\small
+\caption{Standalone and connected use of my contribution areas}
+\label{tab:individual-standalone-e2e}
+\begin{tabularx}{\textwidth}{p{0.24\textwidth}X X}
+\toprule
+\textbf{Mode} & \textbf{Description} & \textbf{Example from my work} \\
+\midrule
+Standalone execution &
+A user uses one module and stops at its output. &
+Use the Benchmark Platform to submit predictions and view leaderboard results. \\
+\midrule
+Connected workflow &
+Outputs from one module become inputs to another module. &
+Run a graph pipeline, save the selected model artifacts, then deploy them through the Deployment module. \\
+\midrule
+Operational workflow &
+The model is no longer only a file; it becomes a monitored service. &
+Prepare artifacts, build a Docker image, run FastAPI endpoints, and inspect tracking summaries. \\
+\bottomrule
+\end{tabularx}
+\end{table}
+
+\section{Pipeline Module Architecture}
+The Pipeline Module represents machine learning workflows as a DAG. Nodes are split into six functional categories: input, preprocessing, model, prediction, metric, and merge. The DAG is compiled by sorting the nodes topologically, which ensures that parent nodes execute before their child nodes.
+
+This module was important to my work because it required understanding a machine-learning workflow as a connected structure rather than a sequential script. In a simple script, the programmer writes the order directly. In a graph system, the engine must infer a valid order from node connections, preserve dependencies, and make sure that data produced by one node is delivered correctly to the next node. Working on this part helped me understand that pipeline design is not only about adding model or preprocessing functions; it is also about controlling how information moves through the system.
+
+Two major optimizations were introduced to improve execution performance. The duplicate-node sharing work is presented as part of my pipeline contribution, while the \modulepath{runParallel} execution functionality was developed as a shared contribution by Mohamed Ashraf and me:
+\begin{enumerate}
+    \item \textbf{Duplicate first-node sharing:} When multiple branches start with the same preprocessing step, the engine automatically shares the output of the first node rather than duplicating the calculation (Figures~\ref{fig:before_sharing} and \ref{fig:after_sharing}).
+    \item \textbf{Active consumer counting:} The engine counts the active downstream consumers for each intermediate array. Once all child nodes finish execution, the parent node's temporary data is freed from RAM.
+\end{enumerate}
+
+\begin{figure}[H]
+\centering
+\begin{subfigure}{0.48\textwidth}
+    \centering
+    \includegraphics[width=\textwidth]{../imgs/before_sharing.png}
+    \caption{Before duplicate sharing}
+    \label{fig:before_sharing}
+\end{subfigure}
+\hfill
+\begin{subfigure}{0.48\textwidth}
+    \centering
+    \includegraphics[width=\textwidth]{../imgs/after_sharing.png}
+    \caption{After duplicate sharing}
+    \label{fig:after_sharing}
+\end{subfigure}
+\caption{Optimization of Duplicate Node Sharing in DAGs}
+\end{figure}
+
+\subsection{Merge Node Role in the Pipeline}
+\noindent The Merge Node is one of the features that makes the graph pipeline more flexible than a simple linear pipeline. In a branch-based workflow, several paths may produce different predictions or probability outputs. Without a merge operation, the user would need to collect these outputs manually and write separate code to combine them. The Merge Node gives the graph a controlled point where multiple outputs can be joined into one final result.
+
+From my perspective, implementing the Merge Node was challenging because it required understanding how upstream nodes communicate with downstream nodes. The output shape may differ depending on whether the branch produces direct class labels or probability vectors. Therefore, the merge behavior had to handle both direct predictions and probability-based predictions in a way that remained deterministic and understandable. This work taught me that graph nodes are not isolated functions; each node must respect the data contract between previous and next stages.
+
+\subsection{Run Parallel Role in the Pipeline}
+\noindent The \modulepath{runParallel} functionality allows independent graph branches to execute concurrently when their dependencies are satisfied. This improves the execution capability of \systemname{} because branch-heavy workflows often contain paths that do not depend on each other after a shared preprocessing stage. Running those branches sequentially wastes available CPU resources, while running them in parallel can reduce waiting time and improve the user experience for larger experiments.
+
+The main difficulty in this work was thinking beyond sequential execution. A graph cannot simply start all nodes at once. Each node must wait until its parent nodes have finished, and shared intermediate data must remain available until all consumers are done. For this reason, the parallel scheduler needed synchronization, dependency checking, active consumer counting, and careful GIL handling. This was one of the parts of the project that made me think like a systems engineer rather than only as a machine-learning user.
+
+\section{Benchmark Module Architecture}
+The Benchmark Module provides a web-based platform for comparing model performances. It consists of a React frontend and a Node.js backend using Express and MongoDB.
+
+The Benchmark Module was important because it changed \systemname{} from a local technical framework into a more visible platform. Machine-learning results are only useful when users can inspect them, compare them, and understand where their work stands relative to other submissions. My work on the dashboards and authentication-related screens focused on this product side of the project: making benchmark information accessible and separating the experience of normal users from administrative users.
+
+\subsection{Database Schema Design}
+The database schemas are defined using Mongoose. The three main schemas are:
+\begin{itemize}[leftmargin=*]
+    \item \textbf{User Schema:} Stores names, emails, hashed passwords (via bcrypt), and role properties (\texttt{"user"} or \texttt{"admin"}).
+    \item \textbf{Benchmark Schema:} Defines the title, description, target column name, problem type, Google Drive dataset links, and a reference to the evaluation metric schema.
+    \item \textbf{Submission Schema:} Tracks the submitted repository link, predictions file link, submission date, and calculated score.
+\end{itemize}
+
+The benchmark design separates benchmark creation from submission evaluation. This separation was important because the creator defines the task once, while many users may submit predictions under the same metric and hidden target file. Table~\ref{tab:benchmark-components-individual} summarizes the main components that I worked with or connected through the dashboard and authentication flow.
+
+\begin{table}[H]
+\centering
+\small
+\caption{Benchmark Platform components related to my work}
+\label{tab:benchmark-components-individual}
+\begin{tabularx}{\textwidth}{p{0.28\textwidth}X}
+\toprule
+\textbf{Component} & \textbf{Responsibility} \\
+\midrule
+Authentication and authorization &
+Handles sign-up, login, password hashing, JWT creation, user identity, and admin-only checks. \\
+\midrule
+Benchmark management &
+Stores benchmark title, description, problem type, target column, dataset links, metric settings, and creator. \\
+\midrule
+Submission management &
+Receives prediction-file links and repository links, validates ownership, prevents duplicate submissions, and stores calculated scores. \\
+\midrule
+Python validation and scoring scripts &
+Validate benchmark files, compare submitted predictions with hidden targets, and calculate selected Scikit-learn metrics. \\
+\midrule
+User dashboard &
+Displays a user's benchmarks, submissions, scores, and account-related information in one place. \\
+\midrule
+Admin dashboard &
+Displays platform-level management views for user inspection and controlled deletion actions. \\
+\bottomrule
+\end{tabularx}
+\end{table}
+
+\subsection{Dashboard Views}
+The User Dashboard lists active benchmarks and submissions. The Admin Dashboard is restricted to administrative users (Figure~\ref{fig:admin_dashboard_logic}), allowing them to browse and delete users, manage roles, and register new evaluation metrics.
+
+The user dashboard was designed to answer a simple question: what has this user created or submitted? It displays the user's benchmarks and submissions in a clear page so the platform does not feel like a collection of disconnected forms. This matters because benchmark systems depend on visibility. If users cannot easily see their own work, scores, and submitted results, the system becomes difficult to use even if the backend calculations are correct.
+
+The admin dashboard has a different purpose. It is not mainly about personal benchmark progress; it is about system management. The administrator needs to inspect users, control access, and manage platform-level actions. Working on this part helped me understand that interface design depends on role. A normal user needs clarity and personal progress. An administrator needs control, monitoring, and permission-aware actions.
+
+\begin{figure}[H]
+\centering
+\begin{minipage}{0.65\textwidth}
+\small
+\renewcommand{\arraystretch}{1.15}
+\begin{tabular}{|l|l|p{3.5cm}|}
+\hline
+\textbf{Role} & \textbf{Dashboard Access} & \textbf{Authorized Operations} \\ \hline
+\texttt{user} & User Dashboard & View leaderboards, create benchmarks, submit predictions \\ \hline
+\texttt{admin} & Admin Dashboard & View users, delete users, register new metrics \\ \hline
+\end{tabular}
+\end{minipage}
+\caption{Access Control matrix for dashboards}
+\label{fig:admin_dashboard_logic}
+\end{figure}
+
+\subsection{Login and Sign-up Flow}
+\noindent The login and sign-up pages were also part of making the benchmark module feel like a complete platform. A benchmark platform needs user separation because submissions, dashboards, and administrative permissions depend on knowing who is interacting with the system. The sign-up flow creates accounts, stores hashed passwords through the backend, and assigns roles based on the configured administrator email. The login flow verifies credentials, stores the returned user and token in the browser, and allows the frontend to show the correct pages.
+
+From a personal learning perspective, this part taught me that authentication screens are not only visual forms. They connect the frontend, backend routes, validation messages, token storage, navigation, and role-based access. A small mistake in this flow can make the platform confusing or unsafe. Therefore, I had to think about the full user journey: creating an account, logging in, seeing the dashboard, accessing the admin view only when authorized, and logging out cleanly.
+
+\section{Deployment Module Architecture}
+The Deployment Module is the primary contribution of this work. It packages trained estimators and preprocessors into a containerized REST service. Figure~\ref{fig:serving_architecture} outlines the serving and validation components.
+
+\begin{figure}[H]
+\centering
+\includegraphics[width=0.85\textwidth]{../imgs/serving_architecture.pdf}
+\caption{Model Serving and Validation Architecture}
+\label{fig:serving_architecture}
+\end{figure}
+
+The system design relies on four core elements:
+\begin{itemize}[leftmargin=*]
+    \item \textbf{FastAPI Server:} Exposes standard inference endpoints for JSON payloads and batch inference endpoints for uploaded CSV files.
+    \item \textbf{Great Expectations Schema Validation:} Validates incoming request values against expected bounds, preventing invalid inputs from reaching the model.
+    \item \textbf{Telemetry Tracking:} Records prediction events, statuses, row counts, latencies, timestamps, and errors to a JSON lines file on disk.
+    \item \textbf{Model Version Control (VCS):} Creates unique commits of configuration and model binaries, allowing rollbacks to older deployments.
+\end{itemize}
+
+The central design contract is the deployment workspace. The workspace contains \modulepath{config.json}, a \modulepath{models/} directory, generated serving files, and target-specific runtime files. The configuration file is the boundary between training and serving: it tells the service which artifacts to load, how the request schema should be validated, and where telemetry should be written.
+
+\begin{table}[H]
+\centering
+\small
+\caption{Deployment workspace responsibilities}
+\label{tab:deployment-workspace-contract-individual}
+\begin{tabularx}{\textwidth}{p{0.25\textwidth}X}
+\toprule
+\textbf{Workspace item} & \textbf{Role in the deployed service} \\
+\midrule
+\modulepath{config.json} &
+Defines model artifact paths, schema-validation rules, and telemetry settings. \\
+\midrule
+\modulepath{models/} &
+Stores serialized preprocessing pipelines, feature selectors, and final models used by \modulepath{ModelService}. \\
+\midrule
+\modulepath{accelera\_deployment/} &
+Contains the serving code copied into the runtime package, including FastAPI, validation, model loading, and tracking modules. \\
+\midrule
+\modulepath{Dockerfile} and \modulepath{requirements.txt} &
+Define the container image and runtime Python dependencies used for local or remote serving. \\
+\midrule
+\modulepath{experiments/} &
+Stores committed model/config snapshots for deployment rollback through the VCS subsystem. \\
+\bottomrule
+\end{tabularx}
+\end{table}
+
+% -----------------------------------------------------------------------------
+% CHAPTER 4: IMPLEMENTATION DETAILS
+% -----------------------------------------------------------------------------
+\chapter{Implementation Details}
+\label{chap:methodology}
+
+\section{Pipeline Module Parallel Scheduler}
+The parallel scheduler in \systemname{} is implemented in C++ in \modulepath{src/core/graph.cpp}. This \modulepath{runParallel} functionality was a joint contribution by Mohamed Ashraf and me. When parallel execution is enabled, the graph uses \modulepath{std::async} to execute independent nodes concurrently. The scheduling logic uses counting semaphores to limit the number of active CPU threads, and a binary semaphore to serialize GPU access.
+
+This shared work was important because graph execution cannot be parallelized by simply launching every node at the same time. The scheduler must preserve dependency order, wait until parent nodes finish, protect Python object access through GIL handling, and release intermediate data only after all downstream consumers have finished using it. My role in this work focused on understanding how graph branches should be scheduled safely and how memory should be released without breaking later nodes, while Mohamed Ashraf also contributed to the design and implementation of the run-parallel execution flow.
+
+Algorithm~\ref{algo:run_parallel} shows the parallel execution logic. It tracks finished and started nodes, releases the GIL during execution, and catches exceptions thrown by separate threads.
+
+\begin{lstlisting}[style=algostyle,caption={Parallel Execution Engine in C++},label={algo:run_parallel}]
+Input: execution_order nodes, cpu_threads limit
+Output: executed graph with updated node states
+
+1:   Release GIL via py::gil_scoped_release
+2:   Initialize finished_executing map to false for all nodes
+3:   Initialize started_executing map to false for all nodes
+4:   Initialize CPU semaphore with cpu_threads count
+5:   Initialize GPU semaphore with 1 (binary semaphore)
+6:   Initialize atomic counter rem_nodes = size(execution_order)
+7:   while rem_nodes > 0 do
+8:       Acquire nodes semaphore
+9:       for each node in execution_order do
+10:          if started_executing[node] == true then continue
+11:          check if all parent nodes are finished_executing
+12:          if parents_finished == true then
+13:              if node.uses_gpu == true then
+14:                  Acquire GPU semaphore
+15:              else
+16:                  Acquire CPU semaphore
+17:              end if
+18:              set started_executing[node] = true
+19:              spawn std::async(launch::async, [node]() {
+20:                  Acquire GIL via py::gil_scoped_acquire
+21:                  try {
+22:                      node->execute()
+23:                  } catch (...) {
+24:                      store_exception()
+25:                  }
+26:                  decrement consumer counts for parent nodes
+27:                  if parent consumer count == 0 then
+28:                      release parent temporary memory
+29:                  end if
+30:                  set finished_executing[node] = true
+31:                  decrement rem_nodes atomically
+32:                  Release CPU/GPU semaphores
+33:                  Release nodes semaphore
+34:              })
+35:          end if
+36:      end for
+37:  end while
+38:  Re-throw any caught exceptions to the Python runtime
+\end{lstlisting}
+
+\subsection{Execution Flow and GIL Release Implementation}
+The primary implementation challenge in the parallel execution flow was GIL (Global Interpreter Lock) contention. Because Python objects (such as scikit-learn estimators) are executed inside separate worker threads, concurrent calls will block each other if they attempt to manipulate Python references simultaneously. As part of the shared \modulepath{runParallel} contribution, Mohamed Ashraf and I structured a two-tier block wrapper in \modulepath{src/core/graph.cpp}:
+\begin{enumerate}
+    \item Before entering the loop-scheduling phase, the main thread releases the GIL using \texttt{py::gil\_scoped\_release}. This allows other native OS threads to run without waiting.
+    \item Within each spawned worker thread, before invoking the node's \texttt{execute()} function, the GIL is explicitly acquired using \texttt{py::gil\_scoped\_acquire}. As soon as the call exits, the scope ends, immediately freeing the GIL for other concurrent threads.
+\end{enumerate}
+
+\subsection{Concurrency Semaphores and GPU Serialization}
+To control the allocation of hardware resources, the shared \modulepath{runParallel} implementation uses custom semaphores based on C++ synchronization primitives:
+\begin{itemize}[leftmargin=*]
+    \item \textbf{CPU Thread Limiter:} A counting semaphore initialized to \texttt{ACCELERA\_NUM\_THREADS} (or system cores minus one). Worker threads block on this semaphore before execution, preventing context-switching overhead from over-subscription.
+    \item \textbf{GPU Access Lock:} A binary semaphore (mutex) used to serialize accesses to CUDA contexts. Because multiple threads submitting operations to the same GPU concurrently can cause driver crashes, any node with the \texttt{uses\_gpu} flag is forced to acquire this binary lock, serializing GPU execution while keeping CPU-bound preprocessing branches running in parallel.
+\end{itemize}
+
+\subsection{Personal Reflection on Parallel Execution}
+\noindent The most valuable lesson from the \modulepath{runParallel} work was that performance improvements must not break correctness. It is easy to describe parallel execution as ``running things at the same time,'' but the real engineering problem is deciding what is allowed to run at the same time. A node can only start when every parent has produced valid output. A parent buffer can only be released when every child that needs it has finished. If either rule is broken, the graph may produce wrong results, crash, or lose intermediate data.
+
+This work helped me understand synchronization as a design responsibility. Semaphores, atomic counters, and maps for started and finished nodes were not only low-level programming tools; they were the mechanism that protected the graph's logical meaning. The experience also showed me why debugging parallel systems is difficult. A sequential bug often appears in the same place every time, while a parallel bug may depend on timing, scheduling, and the order in which threads finish. This made careful design and clear testing essential.
+
+\section{Merge Node and Voting Strategies}
+The \modulepath{MergeNode} class combines outputs from multiple prediction branches. Mazen implemented this node in C++ (\modulepath{src/nodes/merge.cpp}) and connected it to NumPy and SciPy components. The node supports a hard-voting strategy implemented in C++:
+\begin{itemize}[leftmargin=*]
+    \item \textbf{Direct Class Predictions (1D Arrays):} Collects predicted category labels from all upstream branches, stacks them into a single 2D NumPy array (rows correspond to samples, columns to model outputs), and uses \modulepath{scipy.stats.mode} to extract the majority class label.
+    \item \textbf{Probability Predictions (3D Arrays):} Stacks predicted probabilities across all branches. It computes class labels for each model using \texttt{np.argmax} across the probability dimensions and then applies majority voting on the resulting class labels.
+\end{itemize}
+
+\subsection{Voting Strategy Implementation and Edge Cases}
+In \modulepath{src/nodes/merge.cpp}, Mazen handled several implementation edge cases:
+\begin{enumerate}
+    \item \textbf{Single-Model Fallback:} If the merge node only receives a single input branch, it directly routes the input to the output without calling voting functions, avoiding unnecessary computation.
+    \item \textbf{Tie-Breaking:} When the voting results are split evenly, the node falls back to selecting the output of the first model (the primary branch), guaranteeing deterministic results.
+    \item \textbf{GIL Safety in Numpy Stack:} Because stack operations call back into the Python/NumPy interpreter, the merge execution block is wrapped in a GIL acquisition scope, securing memory allocations.
+\end{enumerate}
+
+The Merge Node was valuable because it made branch comparison more natural. Instead of forcing the user to leave the graph and manually combine model outputs, the graph itself can represent the final aggregation step. This makes the pipeline more expressive and closer to real experimentation, where different model branches may contribute to one final decision. Personally, this part improved my understanding of output shapes, deterministic behavior, and how a node should remain predictable even when receiving different kinds of upstream data.
+
+\section{Benchmark REST APIs and Dashboards}
+Mazen designed and built the full client-server subsystem for the Benchmark module.
+
+\subsection{Secure Backend Authentication Routes}
+Implemented in Express and MongoDB in \modulepath{benchmark/backend/routes/user.js}:
+\begin{itemize}[leftmargin=*]
+    \item \textbf{Login Route (\texttt{POST /login}):} Sanitizes the input email, locates the user document, and compares the password against the stored bcrypt hash. Upon matching, it generates a signed JSON Web Token (JWT) with a 7-day expiration containing the user's MongoDB ID and role payload.
+    \item \textbf{Signup Route (\texttt{POST /signup}):} Hashes new user passwords using a salt work factor of 10. If the email matches the environment parameter \texttt{ADMIN\_EMAIL}, the server automatically promotes the role to \texttt{"admin"}.
+    \item \textbf{Deletion Route (\texttt{DELETE /:id}):} Restricted to admin users, allowing the deletion of any user profile except their own to prevent lockout.
+\end{itemize}
+
+\subsection{Submission Processing and Score Validation Route}
+Implemented in \modulepath{benchmark/backend/routes/submissions.js}, the scoring route runs the evaluation pipeline when a user submits a CSV file:
+\begin{enumerate}
+    \item Downloader modules download the predictions CSV file and the hidden ground truth CSV from Google Drive.
+    \item The backend validates the integrity of the files, verifying that the number of rows matches.
+    \item It executes a Python worker subprocess configured with the target metric schema (e.g. F1-score or Mean Squared Error), calculates the performance score, and saves the submission to MongoDB.
+\end{enumerate}
+
+\subsection{Frontend Dashboards}
+Built in React (\modulepath{benchmark/frontend/src/components/}) using state Hooks and async fetch requests:
+\begin{itemize}[leftmargin=*]
+    \item \textbf{User Dashboard (\texttt{dashboard.jsx}):} Displays a user's details, lists all benchmarks created by the user, and presents a grid of their submissions with performance scores and date history.
+    \item \textbf{Admin Dashboard (\texttt{adminDashboard.jsx}):} Renders user lists and provides interactive deletion controls, checking JWT payloads to ensure administrative access.
+\end{itemize}
+
+\subsection{User Dashboard Design}
+\noindent The user dashboard was implemented to give each user a personal overview of their benchmark activity. It retrieves the authenticated user's benchmarks and submissions, displays account information, and presents the user's results in a structured page. This matters because benchmark platforms can become confusing if users must navigate through many pages to remember what they created or submitted. By grouping personal benchmarks and submissions together, the dashboard makes the platform easier to use and gives the user a clear sense of ownership.
+
+While implementing this screen, I learned that a dashboard is not only a place to display data. It must also handle empty states, loading states, and missing authentication. For example, when a user is not logged in, the dashboard redirects the experience toward login instead of failing silently. When no benchmarks or submissions exist, the page displays a clear empty message. These small interface decisions help make the platform feel more complete and understandable.
+
+\subsection{Admin Dashboard Design}
+\noindent The admin dashboard was designed for a different type of user. Instead of showing personal submissions, it lists registered users and provides management actions such as deleting users while preventing the administrator from deleting their own account. The backend protects this route using authentication and admin middleware, while the frontend checks the current user's role before rendering the management interface.
+
+This part taught me that user roles affect both interface design and backend logic. A normal user interface should reduce complexity and focus on personal work. An admin interface should expose control and monitoring features while remaining protected. Implementing this distinction helped me understand how a web platform becomes more than a set of pages: it becomes a role-aware system.
+
+\subsection{Login and Sign-up Implementation}
+\noindent The login and sign-up pages connect the frontend to the backend authentication routes. The sign-up page collects the user's name, email, and password, sends them to the backend, and redirects the user to login after account creation. The backend hashes passwords using \texttt{bcryptjs} and assigns the admin role when the email matches the configured administrator email. The login page verifies credentials, receives a JSON Web Token (JWT), stores the user and token in local storage, and allows the frontend to send authenticated requests later.
+
+From a personal perspective, this part was important because it connected technical correctness with user experience. The authentication flow had to be simple enough for users, but it also had to support access control for dashboards. I learned that login and sign-up pages are part of the product identity of a platform. If these screens are unclear or disconnected, the rest of the system feels incomplete even if the benchmark calculations work correctly.
+
+\section{Deployment Module Serving and Validation}
+I was fully responsible for implementing the Deployment module, which converts trained pipelines into containerized web services.
+
+\subsection{Personal Motivation and Deployment Scope}
+\noindent The Deployment module was my main contribution because it represents the point where \systemname{} moves from experimentation toward practical use. In many machine-learning projects, the workflow stops after a model is trained, evaluated, and saved to disk. However, a saved model file is not enough for real usage. It must be loaded by a service, protected by validation, exposed through an API, packaged with dependencies, and started on a machine that users or other applications can reach.
+
+At the beginning of this part, deployment was challenging for me because it required knowledge outside the normal model-training workflow. I had to understand how \texttt{.pkl} model files, configuration files, Python services, Docker containers, command-line scripts, SSH connections, and cloud/server machines interact. This changed my view of machine-learning engineering. I learned that deployment is not only writing prediction code; it is the process of making a model usable, repeatable, and reachable in a real environment.
+
+Figure~\ref{fig:deployment_module_overview_individual} summarizes the complete scope of the module. It shows how workspace inputs are committed into the deployment VCS, how the deployment builder prepares the serving container, how validation and inference operate inside the service, and how the final container can run on local Docker, Heroku, or AWS EC2.
+
+\begin{figure}[H]
+\centering
+\makebox[\textwidth][c]{%
+\includegraphics[width=1.35\textwidth,height=0.72\textheight,keepaspectratio]{../dots/deployment_module.pdf}%
+}
+\caption{Overall Deployment Module workflow from model artifacts to serving targets}
+\label{fig:deployment_module_overview_individual}
+\end{figure}
+
+This figure was especially useful for organizing the module in my mind. Deployment contains many moving parts, and it is easy to lose track of where one responsibility ends and another begins. Separating workspace inputs, version control, orchestration, serving, and deployment targets helped me design the module as a workflow instead of a random collection of commands.
+
+\subsection{Model Serving Subsystem}
+\noindent Model serving is built on FastAPI and Uvicorn to handle concurrent HTTP requests. The subsystem loads the model and preprocessors via \texttt{ModelService}, which inspects the configuration (\texttt{config.json}) to locate the serialized artifacts. During execution, it runs input data through any fitted preprocessors in sequence before invoking the model's prediction method. A web-based graphical user interface (GUI) is dynamically rendered based on the expected input features, allowing users to submit single predictions interactively.
+
+The serving subsystem was the first major step in turning model artifacts into a real application. I designed it around a clear separation of responsibilities: FastAPI receives requests, \texttt{ModelService} loads the model and preprocessing artifacts, \texttt{schema\_validation.py} protects the model from invalid inputs, and \texttt{tracking.py} records prediction activity. This separation made the module easier to test and easier to explain in the documentation.
+
+\noindent The following methods and files implement the serving logic:
+\begin{itemize}[leftmargin=*]
+  \item \modulepath{modelservice.py}:
+    \begin{itemize}
+      \item \texttt{ModelService.load()}: Parses \texttt{config.json} to discover the active model configuration. It opens and loads the main estimator file (e.g. \texttt{model.pkl}) and any auxiliary preprocessors (e.g. scalers or encoders) from the models directory.
+      \item \texttt{ModelService.predict(input\_data, validate=True)}: Performs prediction. If validation is active, it calls \texttt{validate\_input(input\_data)} to receive validated and coerced values, converts the inputs into a NumPy array, adjusts dimensions, applies all loaded preprocessor transforms sequentially, and calls the underlying estimator's \texttt{predict()} method.
+    \end{itemize}
+  \item \modulepath{server.py}:
+    \begin{itemize}
+      \item \texttt{\_predict(input\_data, endpoint, filename=None)}: Coordinates serving telemetry. It records starting timestamps using \texttt{time.perf\_counter()}, executes model prediction via \texttt{ModelService.predict()}, calculates API response latencies, and logs metrics to the telemetry storage.
+      \item \texttt{/predict} and \texttt{/predict/csv} Endpoints: Standard HTTP POST methods. The first endpoint receives a structured JSON payload, while the second parses uploaded CSV files into Pandas DataFrames.
+      \item \texttt{/gui} and \texttt{/health} Endpoints: The GUI endpoint returns the dynamic interactive testing form via \texttt{\_render\_gui(schema)}, while the health endpoint serves load balancers with standard status checks.
+    \end{itemize}
+\end{itemize}
+
+\subsection{Deployment Artifact Preparation}
+\noindent Before any service can be deployed, the module must prepare the files that belong to the runtime environment. These include the active \texttt{config.json}, model pickle files, service source files, the \texttt{accelera} package, runtime requirements, and the generated \texttt{Dockerfile}. This preparation step matters because deployment should not depend on scattered files or manual copying. A user should be able to run a command and receive a predictable deployment package.
+
+Algorithm~\ref{algo:individual_artifact_preparation} describes the artifact preparation process from my implementation perspective. It shows how the module validates model paths, copies the needed runtime files, and generates the files required for container execution.
+
+\begin{lstlisting}[style=algostyle,caption={Deployment Artifact Preparation},label={algo:individual_artifact_preparation}]
+Input: config.json, model artifact paths, deployment source files
+Output: prepared deployment workspace
+
+1: Read the active deployment configuration from config.json
+2: Extract the configured model artifact paths
+3: For each model path do
+4:     Resolve the path relative to the deployment workspace
+5:     If the artifact does not exist, stop with a clear error
+6:     Copy the artifact into the deployment models directory
+7:     Rewrite the model reference as a deployment-relative path
+8: End for
+9: Copy serving files into accelera_deployment/
+10: Synchronize the accelera package into the runtime folder
+11: Write requirements.txt with serving dependencies
+12: Generate a Dockerfile that copies the service, config, and model files
+13: Return the prepared package for local or remote deployment
+\end{lstlisting}
+
+This algorithm was important because it turned deployment from a manual process into a repeatable workflow. It also forced me to think carefully about paths. A model path that works during training may not work inside a container unless it is copied and referenced correctly. Handling this properly made the module more reliable and easier for users to follow.
+
+\subsection{Runtime Schema Validation}
+\noindent To prevent invalid inputs from causing model crashes or silent degradation, incoming payloads are validated against a schema specified in the configuration. The validation layer uses Great Expectations to construct an ephemeral data source context. Columns are validated for expected names, missing entries, unexpected inputs, and value bounds (e.g., minimum and maximum thresholds). Data types are coerced automatically (e.g., matching string, boolean, integer, or floating-point formats) to match the training format, raising a structured \texttt{SchemaValidationError} if coercion fails.
+
+This was one of the most important design decisions in the module. A deployed model receives data from outside the training script, so it cannot assume that inputs are correct. The validation layer checks feature names, missing values, extra fields, numeric ranges, allowed values, and data types before inference. Personally, this part taught me that deployment quality is strongly connected to data quality. A model service should not only produce predictions; it should also reject invalid requests clearly.
+
+Algorithm~\ref{algo:individual_config_validation} summarizes the validation workflow used before prediction.
+
+\begin{lstlisting}[style=algostyle,caption={Deployment Configuration and Request Validation},label={algo:individual_config_validation}]
+Input: incoming request payload, schema section from config.json
+Output: validated tabular rows or validation error
+
+1: Convert the payload into a Pandas-compatible table
+2: Read the expected feature order from the schema
+3: Check for missing columns
+4: Check for unexpected columns
+5: Coerce each feature according to its configured type
+6: Validate required values, numeric ranges, and allowed categories
+7: If any validation rule fails, raise SchemaValidationError
+8: Return validated rows in the expected model input order
+\end{lstlisting}
+
+\noindent The schema validation system is implemented in \modulepath{schema\_validation.py}:
+\begin{itemize}[leftmargin=*]
+  \item \texttt{InputSchema.\_\_init\_\_(config)}: Extracts features and limits from the configuration. If schema validation is enabled, it requests a Great Expectations context (\texttt{gx.get\_context()}), generates a unique UUID-based data source, registers a pandas-based DataFrame data asset, and configures a whole-dataframe batch definition.
+  \item \texttt{InputSchema.validate(input\_data)}: Normalizes the input payload into a DataFrame. It checks for expected column presence, detects extra or missing features, runs the Great Expectations expectation suite, and executes type coercion.
+  \item \texttt{InputSchema.coerce\_columns(df, errors)}: Loops through features to coerce types. It casts strings to numerical columns using \texttt{pd.to\_numeric(..., errors='coerce')}, checks for integer constraints (\texttt{value \% 1 == 0}), and processes boolean symbols (such as replacing \texttt{"true"}/\texttt{"false"} with Python booleans).
+  \item \texttt{InputSchema.to\_dataframe(input\_data)}: Utility method to convert list, dict, or DataFrame structures into standard Pandas format.
+\end{itemize}
+
+\subsection{Telemetry and Request Tracking}
+\noindent Production deployments capture inference requests and runtime metrics using a lightweight tracking layer. When enabled, the tracker records endpoint names, statuses, row counts, prediction outputs, processing latencies measured in milliseconds, optional error messages, and timestamps. Logging is written incrementally to a JSON lines (\texttt{.jsonl}) file.
+
+Telemetry was included because a deployed system should be observable. During training, the developer can inspect variables directly, but after deployment the service runs through API requests. A tracker gives basic visibility into how many requests were received, how many rows were processed, what statuses occurred, and what the latest event looked like. This made the service more practical and helped connect deployment with monitoring.
+
+\noindent Telemetry tracking is implemented in \modulepath{tracking.py}:
+\begin{itemize}[leftmargin=*]
+  \item \texttt{PredictionTracker.\_\_init\_\_(config)}: Reads the tracking settings and selects the JSONL output path.
+  \item \texttt{PredictionTracker.record(event)}: Formats endpoint, status, row count, latency, optional predictions, optional errors, and timestamps into a single JSON line and appends it to the logging file when tracking is enabled.
+  \item \texttt{PredictionTracker.summary()}: Reads the JSONL log and aggregates total requests, total rows, status counts, and the most recent event.
+\end{itemize}
+
+\section{Multi-Target Deployment Orchestration}
+\noindent The orchestration engine automates containerizing and launching the service across three distinct environments. It stages the codebase, copies project dependency requirements, and builds dockerized containers to ensure portability and reproducibility across platforms.
+\begin{enumerate}[leftmargin=*]
+  \item \textbf{Local Docker}: Generates a clean \texttt{Dockerfile} using a Python slim base image, stops any conflicting containers on the target port, builds the container image locally, and runs it.
+  \item \textbf{Heroku}: Authenticates with the Heroku CLI and pushes/releases the Docker container using Heroku's Container Registry.
+  \item \textbf{AWS EC2}: Creates an SSH transport connection and synchronizes the staging directory to the target host using \texttt{rsync} (excluding Python cache directories). It installs and starts the Docker daemon, builds the container on the instance, and executes local health check probes before verifying the public web endpoint.
+\end{enumerate}
+
+Figure~\ref{fig:orchestration_flow} shows the deployment-target view of the module. I included this figure because it makes the practical purpose of the orchestration layer clear: the same prepared model service should be able to move from local testing to supported cloud/server environments without requiring the user to manually redesign the serving code for each target.
+
+\begin{figure}[H]
+\centering
+\makebox[\textwidth][c]{\includegraphics[width=1.2\textwidth]{../dots/deployment_targets.pdf}}
+\caption{Deployment Orchestration Workflow}
+\label{fig:orchestration_flow}
+\end{figure}
+
+The orchestration layer was the part where I learned the most about the difference between local development and real deployment. Running a Python file locally is simple compared with preparing a container, exposing a port, sending files to a remote host, building the service on that host, starting a container, and checking that the endpoint responds. The CLI commands were designed to hide much of this complexity from the user while still keeping the workflow understandable.
+
+Algorithm~\ref{algo:individual_remote_connection} describes the remote EC2 connection and synchronization process. It captures the idea that deployment is not just one command; it is a sequence of environment preparation, file transfer, remote execution, and verification.
+
+\begin{lstlisting}[style=algostyle,caption={Remote Server Connection and Synchronization},label={algo:individual_remote_connection}]
+Input: EC2 host, SSH user, optional private key, remote directory
+Output: remote directory containing deployment package
+
+1: Build the SSH command with host, user, and key options
+2: Create the remote deployment directory through SSH
+3: Select Dockerfile, config.json, accelera_deployment/, and models/ as inputs
+4: Synchronize the selected files using rsync over SSH
+5: Exclude Python cache files and compiled bytecode
+6: Return the remote deployment root for container build execution
+\end{lstlisting}
+
+Algorithm~\ref{algo:individual_service_startup} shows the service startup and verification workflow. This was important because deployment should not stop after copying files. The module must check that the service actually starts and responds.
+
+\begin{lstlisting}[style=algostyle,caption={Service Startup and Verification},label={algo:individual_service_startup}]
+Input: remote deployment directory, Docker image name, container name, service port
+Output: running container and verified health endpoint
+
+1: Enter the remote deployment directory
+2: Verify that Docker is available or install it when requested
+3: Build the Docker image from the generated Dockerfile
+4: Remove any previous container with the same name
+5: Run the new container with the configured port mapping
+6: Probe the local /health endpoint inside the remote machine
+7: Print the public application URL and GUI URL
+8: Probe the public /health endpoint from the local machine
+9: If public verification fails, report that the TCP port may need to be opened
+\end{lstlisting}
+
+These algorithms represent one of the key lessons I gained from the module: deployment must be verifiable. A script that copies files but does not check whether the service is alive leaves the user uncertain. Adding health checks made the workflow more professional and easier to debug.
+
+\section{Model Version Control (VCS)}
+\noindent The internal VCS provides reproducibility for deployed pipelines. It calculates a stable SHA-1 hash for each commit based on its timestamp and commit message. Models and configurations are archived into an \texttt{experiments/} subdirectory. The system maintains a global index (\texttt{experiments.json}) containing parent-child commit histories, HEAD references, and active deployed markers, facilitating rollbacks and deployments of historical model versions.
+
+The VCS subsystem was created because source-code version control is not enough for deployment. Git can track Python files, but the deployed state also includes generated model artifacts and the active \texttt{config.json}. If these files are changed without a snapshot, it becomes difficult to know which exact model was deployed. The lightweight deployment VCS solves this by committing the model files and configuration together.
+
+Figure~\ref{fig:vcs_overview_individual} shows the VCS registry at a higher level. It helped me explain the difference between the active workspace and stored experiment snapshots.
+
+\begin{figure}[H]
+\centering
+\makebox[\textwidth][c]{\includegraphics[width=1.05\textwidth]{../dots/deployment_vcs.pdf}}
+\caption{Deployment VCS registry structure}
+\label{fig:vcs_overview_individual}
+\end{figure}
+
+\noindent The version control subsystem is implemented in \modulepath{vcs.py}:
+\begin{itemize}[leftmargin=*]
+  \item \texttt{calculate\_hash(timestamp, message)}: Computes the 7-character SHA-1 hash value that acts as the commit identifier.
+  \item \texttt{init(args)}: Configures the repository workspace by creating directories and saving the default index (\texttt{experiments.json}).
+  \item \texttt{commit(args)}: Validates that models exist, generates a commit hash, copies the active configuration and models to \texttt{experiments/<hash>/}, and appends the commit entry to the registry.
+  \item \texttt{log(args)}: Lists all recorded commits, showing details such as commit hash, creation date, message, and deploy status.
+  \item \texttt{show(args)}: Displays the details and settings of a target commit.
+  \item \texttt{deploy(args)}: Deploys a specific commit by copying its stored model files and configuration back into the active runtime workspace.
+\end{itemize}
+
+Figure~\ref{fig:vcs_commit_flow} focuses on the commit operation. This figure is important because it shows that a deployment commit is more than a message: it captures the active configuration and model files together, then records them in the deployment registry so the state can be understood later.
+
+\begin{figure}[H]
+\centering
+\makebox[\textwidth][c]{\includegraphics[width=1.2\textwidth]{../dots/deployment_commit.pdf}}
+\caption{VCS Commit Workflow}
+\label{fig:vcs_commit_flow}
+\end{figure}
+
+Figure~\ref{fig:vcs_deploy_flow} shows the opposite direction of the VCS workflow. Instead of creating a new snapshot, the deployment command restores an existing snapshot into the active workspace. I included this figure because rollback is one of the main practical reasons for adding a deployment-specific VCS.
+
+\begin{figure}[H]
+\centering
+\makebox[\textwidth][c]{\includegraphics[width=1.2\textwidth]{../dots/deployment_deploy.pdf}}
+\caption{VCS Deploy Workflow}
+\label{fig:vcs_deploy_flow}
+\end{figure}
+
+From a personal engineering perspective, this subsystem taught me the importance of reproducibility. Deployment is risky when the user cannot return to a previous state. By snapshotting the model files and configuration together, the module gives the user a practical rollback mechanism. This is a small VCS compared with full industrial model registries, but it fits the project scope and solves a real problem inside \systemname{}.
+
+\section{Command-Line Interface and CLI Commands}
+\noindent The orchestrator and version control features are exposed to the user through command-line interfaces inside \modulepath{deployment.py} and \modulepath{vcs.py}. The supported commands and their behaviors are:
+
+The CLI was a deliberate design choice because deployment workflows are naturally command-based. Building an image, running a container, logging into Heroku, synchronizing files over SSH, and reading remote logs are all operations that developers usually perform from a terminal. My goal was to organize these operations into clear commands so that the user does not need to remember every low-level step.
+
+\subsubsection{Orchestrator Commands}
+\begin{itemize}[leftmargin=*]
+  \item \textbf{prepare}: Prepares the deployment staging area. It copies service modules, synchronizes the \texttt{accelera} source library, and generates the serving \texttt{Dockerfile} and \texttt{requirements.txt}.
+  \item \textbf{build}: Builds the local Docker container. It invokes local subprocess shell commands (e.g. \texttt{docker build -t <image\_name> .}) with an optional \texttt{--no-cache} flag.
+  \item \textbf{run-local}: Starts the local Docker container. It stops and removes any conflicting containers on the port before launching the container using port mappings.
+  \item \textbf{local}: Orchestrates the complete local container pipeline by sequentially running the \textbf{prepare}, \textbf{build}, and \textbf{run-local} steps.
+  \item \textbf{heroku-login}: Logs the client environment into the Heroku CLI and Heroku Docker registry.
+  \item \textbf{heroku-deploy}: Packages and deploys the container to Heroku. It triggers login, pushes the Docker image to Heroku's registry, and releases the container for traffic.
+  \item \textbf{heroku-push} and \textbf{heroku-release}: Granular command calls that push the container image and release it separately.
+  \item \textbf{ec2-deploy}: Deploys to a remote AWS EC2 instance. It establishes an SSH connection, synchronizes files using \texttt{rsync}, compiles/builds the Docker container on the host, runs it, and probes local health targets.
+  \item \textbf{ec2-logs} and \textbf{ec2-stop}: Operational tools to read Uvicorn outputs and terminate the container on the target EC2 node.
+\end{itemize}
+
+\subsubsection{Version Control Commands}
+\begin{itemize}[leftmargin=*]
+  \item \textbf{init}: Sets up a new model version control workspace by initializing directories and registries.
+  \item \textbf{commit}: Snapshots active model parameters and configurations under a message flag (\texttt{-m}).
+  \item \textbf{log}: Prints the history log of all model commits.
+  \item \textbf{show}: Prints the configuration dictionary details of a target commit.
+  \item \textbf{deploy}: Restores a specified commit back into the staging area for subsequent deployment execution.
+  \item \textbf{status}: Prints the current \texttt{HEAD} commit and the deployed commit when available.
+\end{itemize}
+
+\section{Personal Deployment Challenges and Decisions}
+\noindent The Deployment module was the most personally demanding part of this work because it required connecting machine-learning artifacts with backend serving, validation, containers, and remote infrastructure. During implementation, I had to move beyond local model training and understand how a model becomes a long-running service that can receive HTTP requests, validate payloads, return predictions, and remain reproducible across different machines.
+
+One major challenge was organizing the boundary between training artifacts and serving code. The solution was to make \texttt{config.json} the central contract between the training side and the deployed service. The service reads the configured model paths, loads all available preprocessors and the final estimator, and applies the same inference path for JSON and CSV requests.
+
+Another challenge was learning how to make deployment repeatable. Instead of relying on manual copying and terminal commands, I implemented the orchestration script to prepare files, write runtime requirements, generate the Dockerfile, build the container, and support local, Heroku, and EC2 workflows. The EC2 path was especially useful as a learning exercise because it required SSH, \texttt{rsync}, remote Docker builds, container restart behavior, public ports, and health checks.
+
+The VCS subsystem was an important design decision. Git already tracks source code, but the deployed model state also includes generated model files and runtime configuration. I therefore implemented a lightweight deployment-specific registry that snapshots \texttt{config.json} and the active model files, assigns a short hash, records metadata, and supports rollback by restoring a previous snapshot.
+
+Testing the Deployment module also required special care. Many behaviors depend on Docker, Heroku, EC2, SSH, and file-system state, so the verification strategy used temporary workspaces and mocking to test the logic without depending on live cloud services. This made the module more reliable and helped separate the implementation logic from external infrastructure availability.
+
+% -----------------------------------------------------------------------------
+% CHAPTER 5: SYSTEM TESTING AND VERIFICATION
+% -----------------------------------------------------------------------------
+\chapter{System Testing and Verification}
+\label{chap:verification}
+
+\section{Pipeline Verification}
+The parallel executor and voting strategies were verified using unit tests.
+\begin{itemize}[leftmargin=*]
+    \item \textbf{Parallel Execution Tests:} Verify that the topological execution order is preserved, independent branches execute concurrently, and GIL lock release/acquisition behaves correctly.
+    \item \textbf{Merge Node Tests:} Validate the correctness of the C++ hard-voting implementation. The test cases verify that the argmax voting correctly matches SciPy baselines for 1D and 3D prediction arrays, and handles the single-model edge case.
+\end{itemize}
+
+\section{Benchmark Subsystem Verification}
+The benchmark module tests check that the Node.js API endpoints and database operations behave correctly:
+\begin{itemize}[leftmargin=*]
+    \item \textbf{Authentication tests:} Check token generation, verify that invalid login details are rejected, and confirm that the signup route hashes passwords correctly.
+    \item \textbf{Dashboard routing tests:} Validate user-dashboard calls and verify that admin-level routes reject normal user accounts.
+    \item \textbf{Validation tests:} Verify that the server rejects submissions with incorrect row counts or invalid URL structures.
+\end{itemize}
+
+\section{Deployment Module Verification}
+\noindent The verification of the Deployment module is performed through a comprehensive test suite managed by the \texttt{pytest} framework. To ensure high test isolation and allow headless execution in CI/CD pipelines, the test suite leverages extensive mocking via the Python \texttt{monkeypatch} utility to decouple tests from system-level configurations, active network services (e.g., Heroku API, AWS EC2 hosts), and runtime dependency installations. 
+
+\noindent Tests are executed inside temporary filesystem workspaces generated dynamically using the \texttt{tmp\_path} fixture. This ensures that the generated version control indices, log files, and Docker deployment artifacts do not contaminate the primary workspace.
+
+\subsection{Subsystem Verification Details}
+\noindent The verification targets the six major components of the deployment module:
+
+\begin{enumerate}[leftmargin=*]
+  \item \textbf{Model Version Control (VCS) verification}:
+    Validates the stability of the 7-character short SHA-1 hash calculation, confirming that identical timestamp-message pairs produce identical commit IDs. Tests ensure that \texttt{vcs.init()} initializes the experiments metadata directory structure and saves a clean registry template (\texttt{experiments.json}). Commit operations are verified to correctly copy model serialization binaries (e.g., \texttt{model.pkl}), snapshot active configurations, update the \texttt{HEAD} reference, and append metadata entries. Rollback capabilities are verified by deploying historical commits and confirming that the active runtime files are updated with the corresponding commit snapshots.
+  
+  \item \textbf{Model Service Pipeline verification}:
+    Tests check that the \texttt{ModelService} correctly parses configurations, loads active model estimators and preprocessors in the correct sequence, and performs inference. Mock tests confirm that preprocessing steps (such as scaling or encoding) are applied in order before predictions are generated.
+  
+  \item \textbf{Runtime Schema Validation verification}:
+    Validates the runtime behavior of input schema checking. Ephemeral Great Expectations suites are mocked to verify column-presence verification (identifying missing or unexpected fields) and value-bound checking. The data type auto-coercion system is verified by testing how it handles numeric conversions (casting strings to floats or integers) and parsing boolean representations (such as \texttt{"true"}, \texttt{"false"}, or numeric binary flags).
+  
+  \item \textbf{Web Serving Endpoints verification}:
+    Verifies that the FastAPI application correctly routes incoming HTTP requests. Tests evaluate the \texttt{/predict} and \texttt{/predict/csv} endpoints for JSON inputs and multi-row CSV file uploads. Endpoint testing checks that success responses return correct JSON structures with HTTP 200 codes, validation errors throw HTTP 422 codes, and server errors return HTTP 500 codes.
+  
+  \item \textbf{Prediction Tracking and Telemetry verification}:
+    Verifies the telemetry logging behavior. Tests ensure that when telemetry is disabled, no disk writes occur. When active, request parameters, model outputs, timestamps, and latency figures are verified to be written as valid JSON lines to the log file. Additionally, tests verify the telemetry reader's ability to aggregate counts (successful runs, error runs, total row counts) and report them dynamically.
+  
+  \item \textbf{Orchestration CLI verification}:
+    Validates port parsing limits (allowing ports between 1 and 65535, while rejecting negative numbers, non-numeric values, or out-of-bound ports). Tests check the preparation task (\texttt{prepare}) to verify that it creates a clean staging directory, compiles a standard \texttt{Dockerfile} using a Python slim base, and builds a clean \texttt{requirements.txt} containing only runtime-specific dependencies.
+\end{enumerate}
+
+\subsection{Deployment Test Results}
+\noindent When executed in an environment with all core dependencies installed, all 48 test cases run and pass successfully. Table~\ref{tab:deployment-test-summary} summarizes the verification results for the deployment module.
+
+\begin{table}[H]
+\centering
+\scriptsize
+\caption{Deployment Module Test Suite Verification Summary}
+\label{tab:deployment-test-summary}
+\begin{tabularx}{\textwidth}{p{0.29\textwidth}rrrX}
+\toprule
+\textbf{Test File} & \textbf{Cases} & \textbf{Passed} & \textbf{Failed} & \textbf{Verified Feature} \\
+\midrule
+\texttt{vcs\_test.py} & 16 & 16 & 0 & Registry snapshots, workspace rollbacks \\
+\texttt{modelservice\_test.py} & 5 & 5 & 0 & Sequencing of preprocessor transforms \\
+\texttt{schema\_validation\_test.py} & 3 & 3 & 0 & Schema description and column checking \\
+\texttt{server\_test.py} & 8 & 8 & 0 & FastAPI routing, telemetry integration \\
+\texttt{tracking\_test.py} & 3 & 3 & 0 & Telemetry logging and count aggregation \\
+\texttt{deployment\_test.py} & 13 & 13 & 0 & Staging setup, Dockerfile generation \\
+\midrule
+\textbf{Total} & \textbf{48} & \textbf{48} & \textbf{0} & \textbf{All deployment checks passed} \\
+\bottomrule
+\end{tabularx}
+\end{table}
+
+\noindent This successful validation confirms that the deployment engine operates as intended, offering reliable model serving, automated runtime validation, telemetry logging, and repeatable container deployments without regression errors.
+
+% -----------------------------------------------------------------------------
+% CHAPTER 6: DEVELOPMENT PLATFORMS AND TOOLS
+% -----------------------------------------------------------------------------
+\chapter{Development Platforms and Tools}
+\label{chap:platforms-tools}
+
+\section{Hardware Platform}
+My implementation work was developed and verified on a standard developer machine capable of running Python, Node.js, MongoDB, Docker, and local test suites. The Pipeline contribution also required understanding how the native C++ backend uses available CPU cores for branch-level execution and how GPU-marked nodes should be serialized to avoid unsafe concurrent access to one GPU context.
+
+\section{Software Platform}
+The individual contribution used several software stacks because the work crossed native execution, web development, and deployment infrastructure. Table~\ref{tab:individual-platforms} summarizes the main tools used in my parts.
+
+\begin{table}[H]
+\centering
+\small
+\caption{Software platforms and tools used in my contribution}
+\label{tab:individual-platforms}
+\begin{tabularx}{\textwidth}{p{0.27\textwidth}X}
+\toprule
+\textbf{Tool or platform} & \textbf{Role in my work} \\
+\midrule
+C++ and \modulepath{pybind11} &
+Used in the graph backend for native node execution, \modulepath{MergeNode}, and shared \modulepath{runParallel} work. \\
+\midrule
+Python, NumPy, SciPy, Pandas &
+Used for model-serving logic, validation conversion, array handling, majority voting behavior, CSV prediction, and tests. \\
+\midrule
+FastAPI and Uvicorn &
+Used to expose model prediction, CSV prediction, health checks, tracking summaries, and GUI endpoints. \\
+\midrule
+Great Expectations &
+Used to validate incoming feature names, value ranges, required fields, allowed values, and type coercion before inference. \\
+\midrule
+Docker &
+Used to package the deployment service in a repeatable runtime environment. \\
+\midrule
+Heroku CLI, SSH, and \modulepath{rsync} &
+Used for target-specific orchestration through Heroku container workflows and AWS EC2 remote synchronization. \\
+\midrule
+Node.js, Express, MongoDB, Mongoose &
+Used in the Benchmark Platform backend for users, benchmarks, metrics, submissions, and authentication routes. \\
+\midrule
+React &
+Used for user dashboards, admin dashboards, login pages, sign-up pages, and benchmark interaction screens. \\
+\midrule
+Pytest and JavaScript testing utilities &
+Used to verify deployment behavior, schema validation, model loading, telemetry, API routes, and benchmark logic. \\
+\bottomrule
+\end{tabularx}
+\end{table}
+
+This mix of tools was one of the reasons the work was valuable. It forced me to connect low-level execution details with user-facing web behavior and operational deployment behavior. The result is a contribution that is not limited to one programming language or one layer of the project.
+
+% -----------------------------------------------------------------------------
+% CHAPTER 7: USE CASES
+% -----------------------------------------------------------------------------
+\chapter{Use Cases}
+\label{chap:individual-use-cases}
+
+\section{Pipeline Execution Use Cases}
+The Pipeline contribution is useful when a user builds a graph with several alternative model or preprocessing branches. Instead of manually running each branch, the graph backend can preserve dependency order, reuse shared work, execute independent branches in parallel, and merge outputs when needed.
+
+\begin{table}[H]
+\centering
+\small
+\caption{Pipeline use cases related to my work}
+\label{tab:pipeline-use-cases-individual}
+\begin{tabularx}{\textwidth}{p{0.27\textwidth}p{0.31\textwidth}X}
+\toprule
+\textbf{Use case} & \textbf{Input} & \textbf{Expected benefit} \\
+\midrule
+Branch-level execution &
+Graph with independent branches after shared preprocessing &
+The scheduler can run ready branches concurrently while preserving parent-child dependencies. \\
+\midrule
+Shared preprocessing reuse &
+Multiple branches beginning with the same preprocessing node &
+Avoids recomputing the same first transformation and reduces unnecessary work. \\
+\midrule
+Merge-based ensemble output &
+Multiple prediction or probability outputs &
+\modulepath{MergeNode} combines branch outputs through deterministic majority voting. \\
+\midrule
+Memory-aware execution &
+Graph with intermediate arrays consumed by several children &
+Active consumer counting keeps data alive until the final consumer finishes, then releases it. \\
+\bottomrule
+\end{tabularx}
+\end{table}
+
+\section{Benchmark Platform Use Cases}
+The Benchmark Platform supports a learning and comparison cycle. A benchmark creator defines a task, users submit prediction files, the backend validates and scores submissions, and the frontend displays results through dashboards and leaderboards.
+
+\begin{table}[H]
+\centering
+\small
+\caption{Benchmark use cases related to my work}
+\label{tab:benchmark-use-cases-individual}
+\begin{tabularx}{\textwidth}{p{0.27\textwidth}p{0.31\textwidth}X}
+\toprule
+\textbf{Use case} & \textbf{Input} & \textbf{Expected benefit} \\
+\midrule
+User registration and login &
+Name, email, and password &
+Creates a secure account, stores a hashed password, and returns a JWT token after login. \\
+\midrule
+Personal dashboard inspection &
+Authenticated user account &
+Shows benchmarks and submissions connected to the current user. \\
+\midrule
+Admin management &
+Authenticated admin account &
+Allows protected user management actions while preventing unauthorized access. \\
+\midrule
+Prediction submission &
+Benchmark ID, prediction file link, and repository link &
+Validates the submission, calculates score, stores result, and updates leaderboard views. \\
+\bottomrule
+\end{tabularx}
+\end{table}
+
+\section{Deployment Module Use Cases}
+The Deployment module is used after a trained model, AutoML output, or selected graph path produces serializable artifacts. Its purpose is to transform those artifacts into a validated and observable API service.
+
+\begin{table}[H]
+\centering
+\small
+\caption{Deployment use cases related to my work}
+\label{tab:deployment-use-cases-individual}
+\begin{tabularx}{\textwidth}{p{0.25\textwidth}p{0.32\textwidth}X}
+\toprule
+\textbf{Use case} & \textbf{Deployment input} & \textbf{Expected benefit} \\
+\midrule
+Local serving test &
+\modulepath{config.json} and saved model files under \modulepath{models/} &
+Runs a FastAPI model service in Docker before remote deployment is attempted. \\
+\midrule
+Schema-protected prediction &
+Validation rules in the deployment configuration &
+Rejects invalid payloads before they reach the model, reducing runtime prediction errors. \\
+\midrule
+Batch CSV inference &
+Uploaded CSV file matching the configured schema &
+Allows multiple rows to be predicted through the same deployed API. \\
+\midrule
+Model snapshot and rollback &
+Active configuration and model artifacts &
+Commits a deployable model state and restores older states when needed. \\
+\midrule
+Remote EC2 deployment &
+Prepared Docker service, SSH credentials, and EC2 host information &
+Runs the same serving package on a reachable virtual machine with remote health checks. \\
+\midrule
+Operational inspection &
+Tracking log, health endpoint, and remote logs &
+Shows request counts, row counts, status counts, readiness, and runtime output. \\
+\bottomrule
+\end{tabularx}
+\end{table}
+
+\noindent The concrete \modulepath{config.json} structure is shown in the User Guide chapter, where it appears beside the deployment commands that consume it.
+
+% -----------------------------------------------------------------------------
+% CHAPTER 8: USER GUIDE
+% -----------------------------------------------------------------------------
+\chapter{User Guide}
+\label{chap:individual-user-guide}
+
+\section{Using the Pipeline Contributions}
+The Merge Node is used when branch outputs must be combined inside the graph instead of outside it. A typical use case is an ensemble-style graph where several model branches predict the same target. The merge operation receives compatible prediction outputs and applies a deterministic voting strategy.
+
+\begin{lstlisting}[style=paperpython,caption={Conceptual use of a merge node in a graph workflow}]
+# Build independent model branches, then merge their predictions.
+# The exact pipeline builder syntax depends on the surrounding graph setup.
+
+pipe.branch(
+    "models",
+    model_branch_a,
+    model_branch_b,
+    model_branch_c,
+).merge(
+    "majority_vote",
+    strategy="hard_vote"
+)
+\end{lstlisting}
+
+The shared \modulepath{runParallel} functionality is enabled by the graph execution layer when independent branches are ready. Users do not need to manually create threads. The graph scheduler determines readiness from parent dependencies and controls concurrency through semaphores.
+
+\section{Using the Benchmark Platform}
+The benchmark workflow starts with authentication. A user creates an account, logs in, and receives a token that the frontend stores for authenticated requests. From the dashboard, the user can view personal benchmarks, inspect submissions, and open leaderboards. Admin users receive additional management views.
+
+\begin{lstlisting}[style=algostyle,caption={Benchmark submission workflow from the user perspective}]
+Input: benchmark id, prediction file link, repository link
+Output: saved submission and leaderboard score
+
+1: Log in to the benchmark platform
+2: Open the selected benchmark
+3: Submit the prediction file link and repository link
+4: Backend downloads prediction and target files
+5: Backend validates row count and target column
+6: Python scoring script computes the configured metric
+7: Submission and score are saved in MongoDB
+8: Leaderboard displays the updated result
+\end{lstlisting}
+
+\section{Using the Deployment Module}
+The deployment workflow begins in a workspace containing \modulepath{config.json} and the model artifacts referenced by it. The preparation step validates paths, copies runtime files, writes requirements, and creates the Dockerfile.
+
+\noindent A complete example of the Deployment module configuration is shown below. This example matches the structure used by the project deployment code: model artifact paths, schema feature definitions, and tracking settings.
+
+\begin{lstlisting}[style=paperpython,caption={Complete example of deployment config.json}]
+{
+  "models": {
+    "preprocessing_pipeline": "models/preprocessing_pipeline.pkl",
+    "feature_selector": "models/feature_selector.pkl",
+    "final_model": "models/final_model.pkl"
+  },
+  "schema": {
+    "features": [
+      {
+        "name": "alcohol",
+        "type": "number",
+        "required": false,
+        "min": 1,
+        "max": 15
+      },
+      {
+        "name": "malic_acid",
+        "type": "number",
+        "required": false,
+        "min": 2,
+        "max": 5
+      },
+      {
+        "name": "ash",
+        "type": "number",
+        "required": false,
+        "min": 1,
+        "max": 3
+      },
+      {
+        "name": "alcalinity_of_ash",
+        "type": "number",
+        "required": false,
+        "min": 10,
+        "max": 30
+      },
+      {
+        "name": "magnesium",
+        "type": "number",
+        "required": false,
+        "min": 20,
+        "max": 160
+      },
+      {
+        "name": "total_phenols",
+        "type": "number",
+        "required": false,
+        "min": 1,
+        "max": 4
+      },
+      {
+        "name": "flavanoids",
+        "type": "number",
+        "required": false,
+        "min": 0,
+        "max": 6
+      },
+      {
+        "name": "color_intensity",
+        "type": "number",
+        "required": false,
+        "min": 1,
+        "max": 13
+      },
+      {
+        "name": "hue",
+        "type": "number",
+        "required": false,
+        "min": 1,
+        "max": 2
+      },
+      {
+        "name": "proline",
+        "type": "number",
+        "required": false,
+        "min": 278,
+        "max": 1680
+      },
+      {
+        "name": "color_group",
+        "type": "string",
+        "required": false,
+        "allowed_values": ["dark", "light"]
+      },
+      {
+        "name": "proline_class",
+        "type": "string",
+        "required": false,
+        "allowed_values": ["high", "low", "medium"]
+      }
+    ]
+  },
+  "tracking": {
+    "enabled": true,
+    "path": "prediction_logs/predictions.jsonl"
+  }
+}
+\end{lstlisting}
+
+\begin{lstlisting}[style=paperpython,caption={Preparing and running a local deployment service}]
+cd path/to/deployment/workspace
+python accelera_deployment/deployment.py prepare
+python accelera_deployment/deployment.py local --port 8000
+\end{lstlisting}
+
+After the service starts, the main endpoints are \modulepath{/health}, \modulepath{/predict}, \modulepath{/predict/csv}, \modulepath{/tracking/summary}, and \modulepath{/gui}. The GUI endpoint is useful for manual testing because it renders a form from the configured schema.
+
+\begin{lstlisting}[style=paperpython,caption={Calling the deployed prediction endpoint}]
+curl -X POST http://localhost:8000/predict \
+  -H "Content-Type: application/json" \
+  -d '{"input": [{"alcohol": 13.2, "malic_acid": 2.1}]}'
+\end{lstlisting}
+
+The deployment VCS snapshots the active \modulepath{config.json} and model artifacts. This is different from Git because it focuses on deployable model state rather than source-code history.
+
+\begin{lstlisting}[style=paperpython,caption={Creating and restoring deployment snapshots}]
+python accelera_deployment/vcs.py init
+python accelera_deployment/vcs.py commit -m "baseline model"
+python accelera_deployment/vcs.py log
+python accelera_deployment/vcs.py deploy <commit-hash>
+\end{lstlisting}
+
+For EC2 deployment, the module synchronizes the prepared service to a remote host, builds the Docker image there, starts the container, and checks the health endpoint.
+
+\begin{lstlisting}[style=paperpython,caption={Deploying the service to EC2}]
+python accelera_deployment/deployment.py ec2-deploy \
+  --host ec2-xx-xx-xx-xx.compute.amazonaws.com \
+  --user ubuntu \
+  --key-path ~/.ssh/accelera.pem \
+  --remote-dir ~/accelera-deployment \
+  --port 8000
+\end{lstlisting}
+
+If the local health check on the remote machine passes but the public URL is unreachable, the likely cause is a missing inbound security-group rule or a closed public port. This is why the module reports health-check results instead of silently assuming deployment succeeded.
+
+% -----------------------------------------------------------------------------
+% CHAPTER 9: PERSONAL ENGINEERING REFLECTION
+% -----------------------------------------------------------------------------
+\chapter{Personal Engineering Reflection}
+\label{chap:personal-reflection}
+
+\section{Individual Challenges}
+\noindent My individual work in \systemname{} required moving between different engineering layers. I worked on low-level graph execution behavior, user-facing benchmark interfaces, backend authentication flows, and deployment infrastructure. Each layer introduced a different kind of challenge, and the main difficulty was learning how to connect technical details to the overall value of the project.
+
+\subsection{Pipeline Module Challenges}
+\noindent The Pipeline Module challenged me to understand how node-based workflows behave internally. At first, it was easier to think of a pipeline as a sequence of steps. However, the graph module required a different mindset. Each node has parents, children, data dependencies, and execution rules. The Merge Node required me to understand how multiple upstream outputs can be combined without losing shape information or producing inconsistent results.
+
+The run-parallel functionality was even more complex because it required thinking about execution order and synchronization. Independent branches can run at the same time, but only when their parent dependencies are complete. This made me realize that parallel execution is not only a performance feature; it is a correctness problem. If the scheduler starts a node too early or releases data too soon, the result may be wrong even if the code compiles. This challenge improved my ability to reason about graph execution and system state.
+
+\subsection{Benchmark Module Challenges}
+\noindent The Benchmark Module challenged me to think about usability. A backend route may return correct data, but the user still needs a clear interface to understand that data. The user dashboard had to present benchmarks and submissions in a way that felt useful rather than crowded. The admin dashboard had to show system-level information while remaining protected from normal users.
+
+The authentication-related pages also required careful attention. Login and sign-up screens are simple visually, but they connect many parts of the system: user input, backend validation, password hashing, token creation, browser storage, navigation, and permission checks. I learned that a platform feels incomplete if the user flow is confusing, even when the backend logic works correctly.
+
+\subsection{Deployment Module Challenges}
+\noindent The Deployment module was the largest challenge because it required knowledge beyond ordinary machine-learning training. I had to understand configuration files, serialized model artifacts, serving APIs, Docker containers, SSH connections, remote servers, command execution, public ports, and health checks. At the beginning, these concepts felt separate. The main challenge was organizing them into one understandable workflow.
+
+Debugging deployment-related behavior also required patience. A problem could come from a missing model path, an incorrect \texttt{config.json}, a Dockerfile issue, a port conflict, an unavailable remote host, or a public firewall setting. This taught me that deployment is not only about writing Python code. It is about making a system run correctly in an environment that has many external conditions. Because of this, I focused on clear commands, validation, generated files, and verification steps.
+
+\section{Learned Technologies and Skills}
+\noindent This project helped me develop both technical and non-technical skills. Technically, I learned how graph-based workflows are represented, how merge nodes combine outputs, how dependency-aware parallel execution works, and why synchronization matters. I also gained practical experience with React dashboards, user/admin interface separation, login and sign-up flows, JWT-based authentication, and backend route design.
+
+The Deployment module taught me the most new technologies. I learned how FastAPI and Uvicorn can expose a model as an API service, how Great Expectations can support runtime input validation, how Docker can package a service into a repeatable container, how SSH and \texttt{rsync} are used to communicate with remote EC2 machines, and how command-line scripts can automate deployment workflows. I also learned the importance of configuration management through \texttt{config.json} and model artifact paths.
+
+On the non-technical side, I learned how to read and understand an existing codebase, how to debug complex systems with many moving parts, and how to explain technical work in a professional way. Writing the documentation and individual book also helped me connect implementation details to project value. This was important because a graduation project is not only judged by whether the code runs, but also by whether the design decisions, challenges, and outcomes can be communicated clearly.
+
+\section{Individual Outcomes}
+\noindent The outcome of my work is a stronger and more complete \systemname{} platform. In the Pipeline Module, the Merge Node made graph workflows more flexible by allowing outputs from different branches to be combined. The shared \modulepath{runParallel} work with Mohamed Ashraf improved the graph execution capability by allowing independent branches to run concurrently while preserving dependency correctness.
+
+In the Benchmark Module, the user dashboard improved visibility for normal users by showing their benchmarks and submissions. The admin dashboard added a management view for administrator users. The login and sign-up pages helped turn the benchmark module into a more complete platform by supporting account creation, authentication, and role-based access.
+
+The Deployment Module was the most important outcome of my individual work. It helped \systemname{} continue beyond preprocessing, model training, and evaluation. The module packages model artifacts, validates input data, exposes prediction endpoints, records telemetry, stores model snapshots, and supports local and remote deployment workflows. This contribution gives the project a practical final stage: trained models can move toward real usage instead of remaining only local files.
+
+Overall, my work contributed to three levels of completeness: execution completeness through graph and merge behavior, platform completeness through dashboards and authentication, and lifecycle completeness through deployment. These outcomes made \systemname{} more useful as an end-to-end machine-learning framework.
+
+% -----------------------------------------------------------------------------
+% CHAPTER 10: CONCLUSIONS AND FUTURE WORK
+% -----------------------------------------------------------------------------
+\chapter{Conclusions and Future Work}
+\label{chap:conclusion}
+
+\section{Summary of Contributions}
+In this graduation project, I designed, implemented, and verified key subsystems for \systemname{}:
+\begin{itemize}[leftmargin=*]
+    \item \textbf{Pipeline Execution Layer:} A shared contribution with Mohamed Ashraf to the \modulepath{runParallel} C++ scheduler utilizing semaphores for hardware thread limitation, safety gates for GPU tasks, and active consumer counting for memory release, paired with my NumPy/SciPy-based majority voting nodes.
+    \item \textbf{Benchmark Subsystem:} A Node.js Express backend and MongoDB schema model supporting JWT/bcrypt authentication and a React frontend for task management, dashboards, and leaderboard display.
+    \item \textbf{Serving and Deployment Infrastructure:} A production-ready FastAPI model server featuring Great Expectations schema validation, request tracking, model versioning (VCS) hash-based snapshotting, and automated scripts for local Docker, Heroku, and remote AWS EC2 deployment targets.
+\end{itemize}
+
+\section{Future Extensions}
+Future improvements can focus on the following:
+\begin{itemize}[leftmargin=*]
+    \item \textbf{Horizontal Scheduling:} Extend the pipeline parallel scheduler to distribute graph branches across different cluster nodes instead of limiting execution to a single host.
+    \item \textbf{Robust Encryption:} Improve data security in the benchmark module by encrypting ground truth files on MongoDB and verifying predictions inside sandbox runners.
+    \item \textbf{Serverless Serving Targets:} Add serverless deployment capabilities (such as AWS Lambda) to the orchestrator to deploy lightweight models without maintaining active virtual servers.
+\end{itemize}
+
+\end{document}

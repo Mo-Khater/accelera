@@ -1,0 +1,1198 @@
+\section{Accelera Pipe Module}
+
+\subsection{Functional Description}
+
+The Accelera Pipe module can be described formally as a directed acyclic graph:
+\[
+G = (V, E)
+\]
+where \(V\) is the set of computational nodes and \(E\) is the set of directed dependency
+edges between them. Each node \(v_i \in V\) represents one pipeline operation, such as
+preprocessing, model fitting, prediction, merging, or metric evaluation. Each edge
+\((v_i, v_j) \in E\) means that node \(v_j\) depends on the output of node \(v_i\).
+To guarantee valid execution, the graph must satisfy the acyclic condition:
+\[
+\nexists \; (v_1, v_2, \ldots, v_k) \quad \text{such that} \quad v_1 = v_k
+\]
+
+This condition ensures that the graph contains no circular dependencies. Therefore,
+the backend can execute the pipeline using a valid topological ordering. If \(\tau(G)\)
+denotes a topological order of the graph, then every dependency must appear before
+the node that consumes it:
+\[
+u \rightarrow v \Rightarrow \tau(u) < \tau(v)
+\]
+
+During execution, each node applies its stored operation to the outputs received from
+its parent nodes. For a node \(v_i\), the output can be represented as:
+\[
+o_i = f_i(o_{p_1}, o_{p_2}, \ldots, o_{p_m})
+\]
+where \(f_i\) is the operation stored in the node, and
+\(o_{p_1}, o_{p_2}, \ldots, o_{p_m}\) are the outputs of its parent nodes. This
+formulation allows both sequential and branched workflows to be handled by the same
+execution model.
+
+For branch-based execution, the pipeline may produce several candidate paths. If
+\(P = \{p_1, p_2, \ldots, p_n\}\) is the set of candidate paths and \(M(p_i)\) is the
+metric value of path \(p_i\), the selected path can be written as:
+\[
+p^* = \arg\max_{p_i \in P} M(p_i)
+\]
+for maximization metrics such as accuracy, or:
+\[
+p^* = \arg\min_{p_i \in P} M(p_i)
+\]
+for minimization metrics such as loss or error. The selected path \(p^*\) is stored
+inside the \texttt{ExecutedGraph}, which keeps only the fitted transformations and
+models needed for later inference.
+
+At inference time, the executed graph applies only the selected fitted path to new
+input data. If \(X_{\text{new}}\) is the new input, the inference output can be
+represented as:
+\[
+\hat{y} = G^*(X_{\text{new}})
+\]
+where \(G^*\) is the fitted executed graph selected during training. This separation
+reduces unnecessary training-time objects and keeps inference focused on the final
+reusable path.
+
+\subsection{Modular Decomposition}
+
+\begin{figure}[H]
+\centering
+\includegraphics[width=\textwidth,keepaspectratio]{imgs/accelera_pipe.png}
+\caption{Accelera Pipe workflow with custom preprocessing parallelization and pipeline reuse.}
+\label{fig:accelera-pipe-workflow}
+\end{figure}
+
+The Accelera Pipe module is decomposed into two main layers: a Python API layer
+and a native C++ graph execution layer. As shown in
+Figure~\ref{fig:accelera-pipe-workflow}, the Python layer provides the user-facing
+builder interface used to define preprocessing, model, prediction, metric, branch,
+and merge nodes. It also handles metric wrapping, reports, serialization, save/load
+support, and integration with the Code Parallelizer.
+
+The native C++ layer manages the internal graph representation and execution
+behavior. It stores nodes and edges, validates graph connections, computes the
+topological execution order, schedules independent branches for parallel execution,
+selects the final fitted path, and manages intermediate memory. When a preprocessing
+node contains a supported custom method, Accelera Pipe can send it to the
+Parallelizer, receive an optimized callable, and attach it back to the graph before
+execution.
+
+\begin{table}[H]
+\centering
+\small
+\renewcommand{\arraystretch}{1.15}
+\setlength{\tabcolsep}{4pt}
+\caption{Main components of the Accelera Pipe module}
+\label{tab:accelera-pipe-components}
+\begin{tabular}{p{0.30\textwidth}p{0.62\textwidth}}
+\toprule
+\textbf{Component} & \textbf{Responsibility} \\
+\midrule
+Pipeline Builder Interface &
+Provides the user-facing fluent API used to define preprocessing stages, models,
+prediction steps, metrics, merge operations, and branches. It translates each user
+call into a typed computational node instead of immediately executing the operation. \\
+\midrule
+Pipeline State and Persistence Manager &
+Owns the native graph object, maps high-level node categories to graph node types,
+controls graph execution settings, and provides save/load behavior for reusable
+pipeline objects. \\
+\midrule
+Executed Graph Runtime &
+Represents the fitted execution path selected after training. It allows the same
+trained transformations and models to be reused for inference without keeping
+unnecessary validation data or temporary training branches. \\
+\midrule
+Metric and Display Wrappers &
+Adapt supervised metrics, unsupervised metrics, arrays, figures, dictionaries, and
+reports into graph-compatible outputs that can be stored, selected, displayed, or
+used in branch-selection strategies. \\
+\midrule
+Native Graph Engine &
+Stores the pipeline as a directed acyclic graph, validates node connections, computes
+execution order, schedules sequential or parallel execution, manages branch
+selection, and controls intermediate-memory lifetime. \\
+\midrule
+Node Abstraction Layer &
+Defines the common behavior of input, preprocessing, model, prediction, merge, and
+metric nodes, including source-node relationships, stored data, GPU usage flags, and
+selected-path markers. \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+At the Python API level, each builder method creates or configures one graph
+operation. A preprocessing node stores a function or transformer together with
+execution parameters such as \texttt{execute\_fit} and \texttt{cache}. Before a
+preprocessing function is stored, the module attempts to parallelize it through
+\texttt{parallelizer.parallelize}. Model nodes store estimators, prediction nodes
+store test data and the prediction method name, metric nodes store metric wrappers,
+and merge nodes store the merge strategy.
+
+\begin{table}[H]
+\centering
+\small
+\renewcommand{\arraystretch}{1.15}
+\setlength{\tabcolsep}{4pt}
+\caption{Mapping from builder calls to graph node semantics}
+\label{tab:accelera-pipe-builder-map}
+\begin{tabularx}{\textwidth}{p{0.31\textwidth}p{0.18\textwidth}X}
+\toprule
+\textbf{Builder method} & \textbf{Node type} & \textbf{Main role} \\
+\midrule
+\texttt{preprocess(name, func)} &
+\texttt{PREPROCESS} &
+Transform input data or selected columns. \\
+\midrule
+\texttt{model(name, model)} &
+\texttt{MODEL} &
+Fit or apply a machine-learning estimator. \\
+\midrule
+\texttt{predict(name, test\_data)} &
+\texttt{PREDICT} &
+Run a model output function such as \texttt{predict}. \\
+\midrule
+\texttt{metric(name, metric)} &
+\texttt{METRIC} &
+Evaluate predictions using a supervised or unsupervised metric. \\
+\midrule
+\texttt{merge(name, strategy)} &
+\texttt{MERGE} &
+Combine outputs from multiple prediction branches. \\
+\midrule
+\texttt{branch(name, ...)} &
+Multiple nodes &
+Create alternative candidate paths in the DAG. \\
+\bottomrule
+\end{tabularx}
+\end{table}
+
+\subsection{Python-to-Native Graph Construction}
+
+The implementation divides graph construction between the Python builder in
+\texttt{accelera/src/accelera\_pipe/core/pipeline.py} and the C++ graph in
+\texttt{src/core/graph.cpp}. The Python methods do not execute machine learning
+operations immediately. Instead, each method packages the operation and its
+options into a Python object and passes that object, a node type, and a name to
+the PyBind11 graph binding. Table~\ref{tab:node-payload-output} shows the
+concrete payload and runtime output used by each node.
+
+This separation keeps the user-facing code simple while allowing the backend to
+control the actual execution. For example, when the user adds a preprocessing
+step or a model, the Python side only describes what should happen. The C++
+backend later decides when this node is ready to run based on its dependencies.
+This is useful because the graph may contain branches, shared nodes, prediction
+nodes, and metric nodes that cannot be executed safely in the same order they
+were written by the user.
+
+The C++ graph also stores runtime information that is needed during execution,
+such as node sources, cached outputs, selected branches, and fitted objects.
+This means that the pipeline is not just a list of Python function calls. It is
+converted into an executable graph structure that can be scheduled, evaluated,
+saved, and reused. As a result, the Python layer focuses on usability, while the
+native layer handles dependency tracking, memory management, and graph execution.
+
+
+\begin{table}[H]
+\centering
+\small
+\renewcommand{\arraystretch}{1.12}
+\setlength{\tabcolsep}{4pt}
+\caption{Concrete payload and output contracts of Accelera Pipe nodes}
+\label{tab:node-runtime-contracts}
+\begin{tabularx}{\textwidth}{p{0.16\textwidth}p{0.35\textwidth}X}
+\toprule
+\textbf{Node} & \textbf{Stored Python payload} & \textbf{Runtime output} \\
+\midrule
+Input & Training or inference values supplied to \texttt{Graph.execute}. &
+Provides \texttt{X} and optional \texttt{y} to downstream nodes. \\
+\midrule
+Preprocess & \texttt{func}, \texttt{execute\_fit}, and optional
+\texttt{cache}, a column selection is first wrapped in a Scikit-learn
+\texttt{ColumnTransformer}. & A shared dictionary containing transformed
+\texttt{X} and unchanged or transformed \texttt{y}. \\
+\midrule
+Model & Estimator, \texttt{execute\_fit}, and optional \texttt{cache}. & A
+deep-copied fitted estimator stored as the node data. \\
+\midrule
+Predict & Validation \texttt{test\_data}, output method name, and optional
+positive-class index. & Predictions, probabilities, or one selected probability
+column. \\
+\midrule
+Metric & A supervised or unsupervised metric wrapper containing the execution
+method and optional target or feature data. & A structured metric result used
+for reporting and path selection. \\
+\midrule
+Merge & A strategy name, the current implementation supports hard or majority
+voting. & A sample-wise modal class after converting branch outputs to NumPy
+arrays. \\
+\bottomrule
+\end{tabularx}
+\end{table}
+
+The native graph validates every proposed edge before adding it. A preprocessing
+or model node can follow an input or preprocessing node, prediction must follow
+a model, merge receives prediction leaves, and metric follows prediction or
+merge. A normal node added after several leaves is copied once per valid leaf,
+whereas a merge node records all valid leaves as its source vector. Any graph
+mutation clears the compiled flag so that the topological order is regenerated
+before the next execution.
+
+The Python \texttt{branch} method accepts either one node per branch or an
+ordered list of nodes. It flattens the corresponding payloads, types, and names
+before calling \texttt{Graph.split}. The C++ method reconstructs each chain using
+branch offsets. Duplicate sharing is local to one original leaf: a fresh
+\texttt{first\_branch\_nodes} map is created for every leaf, so nodes from
+unrelated split points are never merged. This keeps branch optimization safe,
+because only branches that truly start from the same source can share their
+first repeated operation. It also prevents accidental connections between
+separate parts of the graph. As a result, the graph can reduce duplicated work
+inside one split while still preserving the exact structure intended by the
+user.
+
+\newpage
+\begin{lstlisting}[
+  style=algostyle,
+  basicstyle=\normalsize\ttfamily,
+  caption={Branch construction with conservative first-node sharing},
+  label={alg:branch-construction}
+  ]
+Input: current graph leaves L and branch chains B
+Output: expanded DAG with duplicate first operations shared
+
+for each leaf l in L do
+    first_nodes = empty map
+    for each branch chain b in B do
+        source = l
+        for each operation o at position j in b do
+            type = node type recorded by the Python builder
+            reject o when type cannot legally follow source
+            signature = integer(type) + ":" + string(payload(o))
+
+            if j == 0 and signature exists in first_nodes then
+                source = first_nodes[signature]
+                continue without creating another node
+            end if
+
+            n = create typed node from payload(o)
+            if j == 0 then first_nodes[signature] = n end if
+            n.create_new_data = (j == 0 and type is PREPROCESS)
+            n.copy_input = (j == 0 and preprocessing may mutate input)
+            connect source to n
+            source = n
+        end for
+    end for
+end for
+mark the graph as requiring recompilation
+\end{lstlisting}
+
+The signature deliberately excludes the user-visible node name. It combines the
+node type with the string representation of the payload, so differently named
+instances representing the same first operation can share one node. Only the
+first position of a branch chain is eligible. Thus, branches
+\texttt{[p1,p2,p3]} and \texttt{[p4,p2,p3]} keep separate copies of the later
+\texttt{p2} and \texttt{p3}, because their incoming data may differ. A one-node
+branch is naturally covered because its only node is also its first node.
+
+\subsection{Preprocessing Execution, Copy Policy, and Optional Cache}
+
+The preprocessing implementation distinguishes creation of a new graph data
+container from copying the arrays inside that container. The
+\texttt{should\_create\_new\_data} flag creates a new \texttt{\{X,y\}}
+dictionary at the start of an independent preprocessing branch. Otherwise, the
+node updates and reuses its source dictionary. The separate
+\texttt{should\_copy\_input} flag protects mutable arrays before a custom
+operation is called.
+
+The copy decision is conservative for unknown callables. Custom functions are
+assumed capable of in-place mutation and therefore receive copies of \texttt{X}
+and \texttt{y}. A Scikit-learn transformer normally receives the original input
+because its standard \texttt{transform} contract returns transformed data. If
+its shallow parameters expose \texttt{copy=False}, or parameter inspection
+fails, copying is enabled. This avoids unconditional branch copies while still
+protecting the graph from known or uncertain in-place behavior.
+
+\begin{lstlisting}[
+  style=algostyle,
+  basicstyle=\normalsize\ttfamily,
+  caption={Preprocess node execution and data ownership},
+  label={alg:preprocess-execution}
+  ]
+Input: source node S and preprocessing payload F
+Output: transformed data object attached to node N
+
+read (X, y) from the input node or S.data
+if N.copy_input then
+    X = X.copy()
+    y = None if y is None else y.copy()
+end if
+
+if F.func provides fit then
+    remember the original unfitted function in the training graph
+    transformer = deepcopy(F.func)
+    if cache is enabled and matching model/data files exist then
+        load transformer and transformed X with joblib
+    else
+        if graph is a training graph then fit transformer on (X, y) end if
+        X = transformer.transform(X)
+        store the fitted transformer in F.func
+        if cache is enabled then persist transformer and X end if
+    end if
+else
+    X = F.func(X)
+end if
+
+if N.create_new_data then
+    N.data = {"X": X, "y": y}
+else
+    update the shared source dictionary and point N.data to it
+end if
+\end{lstlisting}
+
+Caching is disabled by default because hashing and storing large arrays can cost
+more time and memory than recomputation. When enabled for preprocessing, the
+cache key is a Joblib hash of the transformer and \texttt{X}, the fitted
+transformer and transformed data are stored separately. Model caching similarly
+hashes the estimator, \texttt{X}, and \texttt{y}, then stores the fitted model.
+Both paths use the project cache directory and are intended for repeated runs
+with equivalent inputs, not as a replacement for executed-graph persistence.
+
+During prediction, a \texttt{PredictNode} walks backward from its fitted model,
+collects all preprocessing payloads, reverses them into training order, and
+applies each fitted transformer or custom function to validation data. An
+executed graph instead obtains new data from its input node. The configured
+output method is then invoked on the fitted estimator. For
+\texttt{predict\_proba}, a nonnegative \texttt{positive\_class} selects one
+probability column after bounds validation.
+
+\subsection{Branching and Path Selection}
+
+The native backend uses a graph abstraction rather than a linear pipeline. The
+\texttt{Graph} class stores all nodes, tracks whether the graph has already been
+compiled, supports cloning, and exposes methods for adding nodes, splitting
+branches, executing, clearing, saving, loading, and enabling parallel execution.
+The graph computes a topological execution order before running. This guarantees
+that each node is executed only after its source nodes have produced their outputs.
+If the graph contains branches, the execution result is followed by path selection
+using one of the supported strategies: maximum metric, minimum metric, custom
+strategy, or all paths.
+
+\begin{lstlisting}[style=algostyle,caption={High-level Accelera Pipe training flow},label={alg:pipeline-training-flow}]
+Input: training data X, optional labels y, graph G, selection strategy S
+Output: predictions or metric results R, executed graph E
+
+1:  Add X and y to the input node of G
+2:  Compile G if its topological order is not already available
+3:  Execute graph nodes sequentially or in parallel depending on G settings
+4:  Collect outputs from final leaf nodes
+5:  If G contains branches, select the path requested by S
+6:  Clone the selected fitted path into a compact executed graph E
+7:  Remove validation-only data and temporary training data
+8:  Return R and E
+\end{lstlisting}
+
+Branching is handled by the native \texttt{split} operation. Each branch is converted
+into a chain of graph nodes starting from the current leaf. If the current leaf node is
+\(L\), then a branch \(B_i\) can be represented as:
+\[
+B_i = (L, n_{i1}, n_{i2}, \ldots, n_{ik})
+\]
+where \(n_{i1}, n_{i2}, \ldots, n_{ik}\) are the operations added to that branch.
+A branch may contain a single node or a list of nodes, so the same mechanism supports
+simple model comparison as well as full alternative sub-pipelines.
+
+A useful optimization in branch construction is duplicate first-node sharing. If
+several branches begin with the same first node, the graph creates that first node
+once and connects the later branch consumers to its output. The sharing condition is:
+\[
+n_{11} = n_{21} = \cdots = n_{m1}
+\]
+where \(n_{i1}\) is the first node of branch \(B_i\). This is safe for the first
+node because all such branches receive the same original input. The optimization is
+deliberately conservative: later repeated nodes are not merged automatically because
+their inputs may already differ due to earlier branch operations.
+
+\begin{figure}[H]
+\centering
+\begin{minipage}{0.49\textwidth}
+    \centering
+    \includegraphics[width=\textwidth]{imgs/before_sharing.png}
+    \caption{Before duplicate first-node sharing}
+\end{minipage}
+\hfill
+\begin{minipage}{0.49\textwidth}
+    \centering
+    \includegraphics[width=\textwidth]{imgs/after_sharing.png}
+    \caption{After duplicate first-node sharing}
+\end{minipage}
+\end{figure}
+
+\subsection{Executed Graph Creation and Pickle State}
+
+Path selection occurs after graph execution because metric values are required
+to choose a branch. Numeric \texttt{max} and \texttt{min} strategies inspect
+the result field of each metric node. A custom strategy receives all metric
+dictionaries with their node names and returns the selected metric-node name.
+Selection marks the chosen metric and repeatedly follows its source pointer to
+the input, while \texttt{all} marks every node.
+
+This separation allows the original pipeline to be trained again while the
+executed graph owns the fitted models and fitted preprocessing payloads required
+for inference. Saving either object uses Python \texttt{pickle}. PyBind11 links
+pickle to \texttt{Graph.getState} and \texttt{Graph.setState}: every node stores
+its type, name, Python payload, flags, selected-path state, data, and source-node
+indices. Loading first recreates typed nodes, then performs a second pass that
+reconnects indices to node pointers. Compilation state is invalidated after
+loading so the topological order is safely rebuilt. This makes saved pipelines
+portable across program runs as long as the same Python classes and dependencies
+are available. It also keeps inference simpler because the executed graph already
+contains the selected fitted path instead of all candidate branches.
+
+
+\newpage
+\begin{lstlisting}[
+  style=algostyle,
+  basicstyle=\normalsize\ttfamily,
+  caption={Construction of the fitted executed graph},
+  label={alg:executed-graph-creation}
+  ]
+Input: completed training graph G and selection strategy s
+Output: compact fitted graph G_star
+
+evaluate s and mark selected_in_path on the retained ancestry
+create a new input node for G_star
+for each selected non-input node n in G do
+    clone n and record old-to-new mapping
+    retain fitted data only for MODEL nodes
+end for
+reconnect every cloned source through the old-to-new mapping
+preserve selected topological order when available
+remove validation test_data from cloned PREDICT nodes
+remove y_true and X from cloned METRIC wrappers
+mark G_star as executed
+clear arrays and temporary runtime data from training graph G
+restore original unfitted preprocessors in G
+return G_star
+\end{lstlisting}
+
+
+
+\subsection{Intermediate Memory Management}
+
+Machine-learning pipelines can produce large intermediate arrays, especially when
+several preprocessing branches are evaluated. Accelera Pipe therefore tracks
+remaining consumers for each node output. Once the last downstream consumer finishes,
+the corresponding intermediate data can be released. Model and metric nodes are
+treated more carefully because they may hold fitted estimators or evaluation state,
+while input and preprocessing data can often be cleared after their consumers are
+done. This policy reduces memory pressure without changing the logical result of the
+graph.
+
+\begin{lstlisting}[style=algostyle,caption={Consumer-count based intermediate release},label={alg:consumer-release}]
+Input: executed node N, remaining consumer table C
+Output: graph with unused temporary data released
+
+1:  for each source node S that feeds N do
+2:      C[S] = C[S] - 1
+3:      if C[S] == 0 and S is releasable then
+4:          clear the temporary data stored by S
+5:      end if
+6:  end for
+\end{lstlisting}
+
+The consumer-count mechanism is used after each node finishes executing. Every
+source node keeps a counter representing how many downstream nodes still need
+its output. For a source node \(S\), the remaining-consumer count can be written as:
+\[
+C(S) = |\{N \mid S \rightarrow N \text{ and } N \text{ has not executed yet}\}|
+\]
+When a downstream consumer completes, the counter is decreased:
+\[
+C(S) \leftarrow C(S) - 1
+\]
+If the counter reaches zero and the source node is safe to clear, the temporary output
+is released. This allows the graph to reduce memory pressure during branch-heavy
+training runs without changing the final predictions or selected path.
+
+\subsection{Parallel Graph Execution}
+The graph can run independent nodes in parallel, but a node can start only after
+all of its parents have finished. For any node \(N\), the readiness condition is:
+\[
+\text{ready}(N) \Longleftrightarrow \forall P \in \text{Parents}(N),\; \text{finished}(P)=\text{true}
+\]
+The backend uses CPU thread semaphores, a separate GPU semaphore, and
+dependency checks over the topological order. This prevents a downstream node
+from reading incomplete data and also serializes GPU work when necessary. CPU
+nodes are allowed to execute concurrently as long as worker slots are available,
+while GPU nodes are handled more conservatively using a single execution slot.
+This makes the scheduler safe for mixed CPU/GPU graphs without changing the
+dependency semantics.
+
+The scheduler repeatedly checks which nodes are ready and assigns them to
+available execution resources. If several branches become ready at the same
+time, they do not need to wait for each other unless there is a dependency
+between them. This is useful in branch-heavy workflows because preprocessing,
+model training, prediction, or metric nodes from different branches may run at
+the same time. At the same time, synchronization keeps the final execution result
+equivalent to a valid sequential topological run. In other words, parallelism is
+used only to improve execution time, not to change the logical order of the
+pipeline. The number of CPU threads is based on hardware concurrency but can be
+overridden using the \texttt{ACCELERA\_NUM\_THREADS} environment variable.
+
+\newpage
+\begin{lstlisting}[style=algostyle,caption={Parallel graph execution scheduling},label={alg:parallel-graph-execution}]
+Input: topological execution order T
+Output: completed graph execution or reported error
+
+1:  Initialize finished and started state for all nodes
+2:  Build remaining-consumer counts for intermediate outputs
+3:  Create limited CPU worker slots and one GPU execution slot
+4:  while unfinished nodes still exist do
+5:      for each node N in T do
+6:          if N has not started and all parent nodes are finished then
+7:              Acquire a CPU slot or the GPU slot depending on N
+8:              Mark N as started
+9:              Launch N asynchronously
+10:             After N finishes:
+11:                 Mark N as finished
+12:                 Release unused source outputs
+13:                 Release the CPU or GPU slot
+14:          end if
+15:      end for
+16:  end while
+17:  Wait for all launched tasks
+18:  Rethrow any stored node execution error
+\end{lstlisting}
+
+Algorithm~\ref{alg:parallel-graph-execution} describes the runtime scheduling idea
+implemented by the native graph backend. The graph is already arranged in
+topological order, but the scheduler does not simply execute nodes one by one.
+Instead, it repeatedly searches for nodes whose parents have finished and launches
+them asynchronously when a CPU or GPU execution slot is available. CPU nodes share
+a limited pool of worker slots, while GPU nodes use a separate single-slot semaphore
+to avoid unsafe concurrent GPU execution. After a node completes, the backend marks
+it as finished, releases any temporary source outputs that are no longer needed, and
+signals the scheduler so that newly ready child nodes can start. Any exception raised
+inside a node is stored and rethrown after all launched tasks are joined, which gives a
+clear error message containing the failed node name and whether it was executed as a
+CPU or GPU node.
+
+
+\subsection{Design Constraints}
+
+The Accelera Pipe module has several design constraints that guide how the graph
+is constructed, executed, and reused. The first constraint is that the internal
+workflow must always remain a valid directed acyclic graph. Since execution
+depends on topological ordering, cyclic dependencies are not allowed. For any
+edge from node \(u\) to node \(v\), the execution order must satisfy:
+\[
+u \rightarrow v \Rightarrow \tau(u) < \tau(v)
+\]
+where \(\tau\) represents the topological order of the graph. This guarantees
+that every node is executed only after its required source nodes have already
+produced their outputs.
+
+The second constraint is node-type validity. Not every node can be connected to
+any other node. For example, a prediction node must follow a model node, a metric
+node must follow a prediction or merge node, and a merge node should combine
+compatible prediction outputs. These restrictions preserve the semantic meaning
+of the pipeline and prevent invalid workflows from reaching the execution stage.
+
+The third constraint is safe memory management. Since branch-heavy workflows can
+produce many temporary arrays, the backend must release intermediate data only
+when it is no longer needed. For a source node \(S\), the remaining-consumer
+count is:
+\[
+C(S) = |\{N \mid S \rightarrow N \text{ and } N \text{ has not executed yet}\}|
+\]
+The output of \(S\) can be cleared only when \(C(S)=0\) and the node is safe to
+release. This reduces memory pressure without changing the final selected path
+or prediction results.
+
+The fourth constraint is parallel execution safety. Independent nodes may run in
+parallel, but a node can start only after all of its parent nodes have completed:
+\[
+\text{ready}(N) \Longleftrightarrow \forall P \in \text{Parents}(N),\;
+\text{finished}(P)=\text{true}
+\]
+This prevents downstream nodes from reading incomplete data. The backend also
+uses limited CPU worker slots and a separate GPU slot to avoid unsafe resource
+sharing during execution.
+
+Finally, the executed graph must not retain training-only data. After training,
+the selected path is cloned into an \texttt{ExecutedGraph}, validation inputs are
+removed, metric targets are cleared, and temporary arrays are released. This
+keeps the saved inference graph compact and focused only on fitted
+transformations and models.
+
+
+\subsection{Summary}
+The Accelera Pipe module also supports persistence. The Python \texttt{PipelineBase}
+class saves and loads pipeline objects using pickle, while the C++ graph exposes
+its state as a Python dictionary containing node information, selected-path flags,
+source indices, cached data, graph compilation state, and parallel execution
+configuration. During loading, the graph rebuilds the nodes and reconnects them
+using the stored source indices, making the native graph serializable.
+
+The module can also export a graph-like representation of the pipeline structure.
+The graph utility code writes an XML-style network description containing layers
+for input, preprocessing, model, prediction, merge, and metric nodes, together
+with their edges. This representation is useful for debugging, visualization,
+and understanding the executable graph generated from the high-level pipeline.
+
+In summary, Accelera Pipe is a hybrid Python/C++ pipeline execution system.
+Python provides the user-facing construction interface, while C++ provides graph
+semantics, execution scheduling, branch selection, memory-lifetime control, and
+parallel execution support, keeping the module both efficient and easy to use.
+
+
+\section{Code Parallelizer Module}
+
+\subsection{Functional Description}
+
+The Code Parallelizer module is responsible for transforming supported loop-heavy
+source code into optimized C++ code annotated with OpenMP pragmas. It is designed
+to reduce the execution time of custom preprocessing functions and standalone code
+snippets by identifying loops that can be safely executed in parallel. The module
+accepts different input forms: a file path, a source string, a custom Python function,
+or a custom transformer instance. Regardless of the input form, the scientific goal is
+the same: normalize the input into a C++ loop-analysis path, detect parallelization
+opportunities, and return either parallelized source code or a compiled
+Python-callable native function.
+
+This process can be viewed as a transformation from an original program \(P\) into
+an optimized program \(P'\):
+\[
+P' = \mathcal{T}(P)
+\]
+where \(\mathcal{T}\) represents the parallelization pipeline, including source
+normalization, loop extraction, loop classification, safety validation, and OpenMP
+pragma insertion. If no safe optimization is found, the transformation keeps the
+program behavior unchanged by returning the original code or callable.
+
+For Python input, the module first lowers a restricted Python subset into C++. This
+conversion is intentionally limited to predictable language constructs such as
+arithmetic expressions, assignments, \texttt{for range(...)} loops, conditionals,
+function definitions, array-style indexing, and simple calls. The resulting C++ code is
+then analyzed by the same loop extraction path used for native C/C++ input. This
+design avoids building two separate parallelization pipelines and ensures that both
+Python and C++ inputs are judged using the same loop features and safety checks.
+
+After normalization, the module extracts candidate loops and checks whether each loop
+can be parallelized safely. For a loop \(L_i\), the final decision can be represented as:
+\[
+d_i \in \{\text{sequential},\; \text{parallel\_for},\; \text{reduction}\}
+\]
+where \(\text{sequential}\) means that the loop is left unchanged,
+\(\text{parallel\_for}\) means that a normal OpenMP parallel loop pragma can be
+inserted, and \(\text{reduction}\) means that the loop can be parallelized using an
+OpenMP reduction clause. This decision is based on both learned classification and
+rule-based safety checks, so the module does not rely only on a model prediction when
+program correctness may be affected.
+
+\begin{table}[H]
+\centering
+\small
+\renewcommand{\arraystretch}{1.15}
+\setlength{\tabcolsep}{4pt}
+\caption{Supported operations in the Python-to-C++ converter}
+\begin{tabular}{p{0.27\textwidth}p{0.60\textwidth}}
+\toprule
+Category & Supported forms and notes \\
+\midrule
+Constants and names & \texttt{None}, booleans, integers, floats, strings, and variables. \\
+\midrule
+Arithmetic & Addition, subtraction, multiplication, division, modulo, and power using \texttt{std::pow}. \\
+\midrule
+Unary and boolean & Unary plus, unary minus, logical not, logical and, and logical or. \\
+\midrule
+Comparisons & Equality, inequality, less-than, less-than-or-equal, greater-than, and greater-than-or-equal, chained comparisons rejected. \\
+\midrule
+Calls and printing & Ordinary function calls and \texttt{print}, keyword arguments are generally unsupported. \\
+\midrule
+Access operations & Attribute access and indexing are supported, slicing is rejected. \\
+\midrule
+Assignment & Single-target assignment and indexed assignment are supported, multi-target assignment is rejected. \\
+\midrule
+Augmented assignment & Simple-name \texttt{+=}, \texttt{-=}, \texttt{*=}, \texttt{/=}, and \texttt{\%=}. \\
+\midrule
+Control flow & \texttt{if}/\texttt{else} blocks and \texttt{return} statements. \\
+\midrule
+Loops & \texttt{for i in range(...)} loops with one, two, or three range arguments. \\
+\midrule
+Functions & Function definitions are emitted as C++ template-style functions, decorators are rejected. \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+After normalization, the module uses Clang AST bindings to extract loop
+information, including the loop source code and line range. The Python layer then
+computes loop features, sends them to a classifier endpoint, and applies rule-based
+validation. If the loop is considered safe, an OpenMP directive such as
+\texttt{\#pragma omp parallel for} is inserted. For valid reduction-style loops, a
+reduction clause can also be generated.
+
+The module follows a fail-safe design. If conversion, analysis, classification,
+compilation, or native extension loading fails, the system keeps the original Python
+function or leaves the code unchanged. This ensures that parallelization remains an
+optimization without altering the program semantics.
+
+
+\subsection{Modular Decomposition}
+
+The Code Parallelizer is built from several stages that prepare the input,
+analyze loops, check safety, and generate optimized OpenMP/native code.
+
+\begin{table}[H]
+\centering
+\small
+\renewcommand{\arraystretch}{1.15}
+\setlength{\tabcolsep}{4pt}
+\caption{Main components of the Code Parallelizer module}
+\begin{tabular}{p{0.27\textwidth}p{0.63\textwidth}}
+\toprule
+Component & Responsibility \\
+\midrule
+Parallelization Orchestrator & Receives source strings, file paths, custom functions, and transformer instances. It coordinates conversion, loop extraction, feature analysis, classification, pragma insertion, caching, compilation, and fallback behavior. \\
+\midrule
+Input Normalization Layer & Converts accepted input forms into a common source-analysis representation. Files are read, source strings are analyzed directly, functions are captured from source, and transformer instances are inspected through their transformation method. \\
+\midrule
+Python-to-C++ Converter & Translates a restricted subset of Python into C++ so Python preprocessing logic can enter the same static loop-analysis pipeline as native C/C++ code. \\
+\midrule
+Loop Extraction Engine & Uses a compiler-style front end to locate loops, record source ranges, and expose structured loop information for feature extraction and rewriting. \\
+\midrule
+Feature Extraction and Embedding Generator & Computes structural, dependency, memory-access, control-flow, arithmetic, and reduction features, then maps them into a fixed-size numeric representation. \\
+\midrule
+Parallelization Classifier and Safety Resolver & Combines classifier predictions with deterministic safety rules to decide whether a loop remains sequential, receives a parallel-for pragma, or receives a reduction pragma. \\
+\midrule
+OpenMP Rewriter & Inserts the selected OpenMP directive while avoiding unsafe duplicate insertion, especially when an outer loop already contains selected inner loops. \\
+\midrule
+Native Compilation and Loading Layer & Wraps optimized C++ into a Python-callable extension, adds OpenMP flags only when needed, builds the native module, loads it at runtime, and returns the optimized callable. \\
+\midrule
+Caching Layer & Stores processed source and compiled native functions using source-based hashes to avoid repeated conversion and compilation. \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+Figure~\ref{fig:parallelizer_workflow} summarizes the overall data flow. In general, 
+supported inputs are normalized into a common C++ loop-analysis path, 
+while callable Python inputs additionally proceed to PyBind11 extension generation.
+
+\begin{figure}[H]
+\centering
+\includegraphics[width=\textwidth,keepaspectratio]{imgs/pp.png}
+\caption{Code Parallelizer module workflow}
+\label{fig:parallelizer_workflow}
+\end{figure}
+
+The feature extraction stage analyzes both code structure and loop behavior,
+including reductions, array accesses, dependencies, indirect memory access,
+early exits, nesting depth, branches, function calls, arithmetic operations, and
+vectorization potential.
+
+These indicators are encoded into a 40-dimensional vector for the classifier,
+then refined by deterministic safety rules that can still detect safe cases such
+as reductions, independent array writes, and nested loop patterns. This two-step
+design is important because the classifier gives a learned prediction, but the
+final decision must still protect program correctness. For example, a loop may
+look parallel from its general structure, but a hidden dependency or unsafe write
+can make it incorrect to parallelize.
+
+The feature vector therefore acts as a compact summary of the loop, while the
+rule-based stage acts as a final safety filter. If the rules detect an unsafe
+pattern, the loop is kept sequential even if the classifier suggests
+parallelization. On the other hand, if the loop matches a known safe pattern,
+such as a valid reduction or independent indexed writes, the system can generate
+the appropriate OpenMP pragma. This makes the decision process more reliable and
+easier to inspect during debugging.
+
+
+\newpage
+\begin{lstlisting}[style=algostyle,caption={Loop classification and pragma insertion}]
+Input: source program P
+Output: source program P' with safe OpenMP pragmas
+
+1:  if P is Python source then
+2:      convert the supported Python subset into C++
+3:  end if
+4:  Extract for-loops using the Clang AST frontend
+5:  for each extracted loop L do
+6:      compute structural, memory, dependency, and reduction features
+7:      send the 40-feature vector to the classifier service
+8:      combine the predicted class with rule-based safety checks
+9:      if the resolved class is parallel_for then
+10:         insert #pragma omp parallel for
+11:     else if the resolved class is reduction then
+12:         insert #pragma omp parallel for reduction(...)
+13:     else
+14:         leave the loop unchanged
+15:     end if
+16: end for
+17: Cache and return the transformed source code
+\end{lstlisting}
+
+The compilation path is used when the input is a Python callable. The
+parallelizer extracts or receives the function source, converts it to C++,
+parallelizes the C++ loop body, wraps the result in a PyBind11 module, compiles
+it as a shared native extension, loads the extension, and returns the optimized
+function. Caching is used at both the transformed-source level and the compiled
+method level. The cache key includes the compilation cache version, the function
+name, the compiler optimization level, the extension suffix, and the source
+code. This prevents recompiling the same function repeatedly.
+
+\subsection{Input Dispatch and Source Normalization}
+
+The public \texttt{parallelize} method is a dispatcher rather than one large
+conversion routine. Its behavior depends on the runtime type of the input, as
+shown in Table~\ref{tab:parallelizer-input-dispatch}. This separation keeps file
+output, in-memory source transformation, and callable compilation as distinct
+operations while reusing the same loop-selection functions.
+
+\begin{table}[H]
+\centering
+\small
+\renewcommand{\arraystretch}{1.12}
+\setlength{\tabcolsep}{4pt}
+\caption{Parallelizer input dispatch and returned output}
+\label{tab:parallelizer-input-dispatch}
+\begin{tabularx}{\textwidth}{p{0.24\textwidth}p{0.39\textwidth}X}
+\toprule
+\textbf{Input form} & \textbf{Implementation path} & \textbf{Output} \\
+\midrule
+Existing file path & Read the file, convert it when the suffix is
+\texttt{.py}, extract, select, and rewrite loops. & A
+\texttt{parallelized\_<stem>.c} file in the requested output directory or the
+repository root. \\
+\midrule
+Source string & Try Python AST parsing, successful Python source is converted
+to C++, while other source continues as C/C++. & Parallelized C++ text returned
+in memory. \\
+\midrule
+Custom Python function & Capture restorable source, bundle helpers, transform
+and compile the source, then attach the runtime native callable. & A
+pickle-compatible \texttt{SourceBackedFunction}, original Python execution is
+retained on failure. \\
+\midrule
+Custom transformer & Optimize only a \texttt{transform} method defined directly
+by the custom class. & The same transformer instance with the method replaced
+when compilation succeeds. \\
+\midrule
+Other Python object & No supported dispatch rule is applied. & The original
+object is returned unchanged. \\
+\bottomrule
+\end{tabularx}
+\end{table}
+
+For a file, extracted loops are serialized to a JSON record containing the loop
+type, start line, end line, and source text. The JSON filename is based on an MD5
+hash of the normalized source. In-memory code avoids this intermediate file and
+converts the native \texttt{LoopInfo} objects directly to dictionaries. Both
+paths then call the same selection and line-rewriting routines.
+
+Custom functions require additional source handling because a compiled runtime
+callable cannot normally be pickled as portable Python source.
+\texttt{SourceBackedFunction} stores the function name and normalized source,
+and recreates the Python function with \texttt{exec} during unpickling. Referenced
+top-level helper functions are discovered recursively through the function's
+global namespace and bundled before the outer function. Nested helper functions
+are removed from the outer body, ordered by their call dependencies, and emitted
+as top-level functions before conversion. The implementation rejects closures,
+captured outer variables, duplicate helper names, and recursive nested helpers,
+because those cases cannot be represented by the current stateless C++ path.
+Simple lambdas can be preserved as source for pipeline serialization, but the
+current Python-to-C++ subset does not compile lambda expressions, so callable
+optimization falls back to Python for that case.
+
+\begin{lstlisting}[
+  style=algostyle,
+  basicstyle=\normalsize\ttfamily,
+  caption={Normalization of a Python callable for compilation},
+  label={alg:callable-normalization}
+  ]
+Input: custom Python function f
+Output: restorable source S and compilation source C
+
+reject f when it captures closure variables
+obtain and dedent inspect.getsource(f)
+parse the source into a Python AST
+recursively collect referenced top-level helper functions
+bundle helpers before f and save the bundle as S
+
+find nested function definitions inside f
+for each nested helper h do
+    reject captured outer variables
+    record calls from h to other nested helpers
+end for
+reject duplicate names or recursive helper dependencies
+topologically order and hoist nested helpers
+remove their original nested definitions from f
+emit top-level helpers followed by f as C
+\end{lstlisting}
+
+\subsection{Deterministic Pragma Generation Without AI}
+
+The classifier service is optional for the currently recognized rule patterns.
+For every extracted \texttt{for} loop, \texttt{\_select\_parallel\_loops}
+first calls the resolver with the class \texttt{none}. The resolver can upgrade
+this class locally without any network request or learned model. Therefore, the
+system can generate pragmas when the classifier is offline, times out, returns
+an error, or is deliberately bypassed, provided that a loop matches one of the
+implemented deterministic patterns.
+
+The rule-only path currently recognizes three families:
+
+\begin{enumerate}[leftmargin=1.2cm]
+  \item \textbf{Scalar reduction update.} The extractor recognizes scalar
+  \texttt{v += expression}, \texttt{v = v + expression},
+  \texttt{v *= expression}, and \texttt{v = v * expression}. A candidate is
+  rejected as a scalar reduction when the same name is indexed as an array.
+  The pragma emitter supports OpenMP \texttt{reduction(+ : v)} and
+  \texttt{reduction(* : v)} when \texttt{v} is not declared inside the loop.
+  Maximum and minimum calls are recorded as classifier features, but the current
+  emitter does not yet construct OpenMP \texttt{max} or \texttt{min} clauses.
+
+  \item \textbf{Independent array write.} A loop is considered an independent
+  write candidate when at least one indexed assignment is found and the local
+  heuristics find no previous-iteration access of the form \texttt{A[i-1]}, no
+  indirect indexing such as \texttt{A[B[i]]}, and no early
+  \texttt{break}, \texttt{continue}, or \texttt{return}. This rule produces a
+  plain \texttt{parallel for} directive.
+
+  \item \textbf{Consecutive nested loops.} The parser counts directly
+  consecutive \texttt{for} headers, allowing whitespace and braces between
+  them. A depth greater than one selects the outer loop and produces
+  \texttt{collapse(depth)}. When both outer and inner ranges appear in the
+  selected-loop list, the rewriting stage skips the inner range so that it does
+  not create nested duplicate pragmas.
+\end{enumerate}
+
+\begin{lstlisting}[
+  style=algostyle,
+  basicstyle=\normalsize\ttfamily,
+  caption={Classifier-free rule-based OpenMP generation},
+  label={alg:rule-only-pragma}
+  ]
+Input: normalized C++ source P and extracted for-loops L
+Output: source P_rule containing deterministic OpenMP pragmas
+
+selected = empty list
+for each loop l in L do
+    features = extract_features(l.code)
+
+    if l contains a supported scalar reduction update then
+        class = reduction
+    else if l writes an array and has no detected carried dependency,
+            indirect access, or early exit then
+        class = parallel_for
+    else if consecutive_for_depth(l.code) > 1 then
+        class = parallel_for
+    else
+        class = none
+    end if
+
+    if class is not none then append (l, class) to selected end if
+end for
+
+for each selected loop ordered by its source range do
+    skip it when its range is contained by a selected outer loop
+    clauses = empty list
+    if consecutive depth > 1 then add collapse(depth) end if
+    if external scalar += reduction then add reduction(+ : variable) end if
+    if external scalar *= reduction then add reduction(* : variable) end if
+    replace the original source range with pragma, clauses, and loop text
+    update the line-offset shift caused by inserted pragma lines
+end for
+return rewritten source
+\end{lstlisting}
+
+No classifier endpoint is contacted for a loop selected by these rules. If the
+rules return \texttt{none}, the implementation attempts to send the
+40-dimensional feature vector to the remote classifier. A classifier failure is
+caught and converted back to \texttt{none}, the resolver is then called again,
+so unresolved loops remain unchanged. If the classifier returns a non-
+\texttt{none} class, the current resolver accepts that class and the pragma
+emitter constructs the directive. Consequently, the deterministic path is a
+useful offline fallback and pre-classifier shortcut, but the current
+implementation should not be described as a complete dependence proof for all
+classifier-selected loops. Extending the rejection rules for aliasing,
+side-effecting calls, and general loop-carried dependencies remains future work.
+
+\subsection{Feature Vector and Source Rewriting Details}
+
+Before classification, comments are removed and structural features are
+computed from the loop text. The 40-dimensional vector contains Boolean flags
+for reductions, carried dependencies, control flow, constant bounds, nesting,
+RAW/WAR indicators, indirect access, early exit, computable trip count, and
+vectorizability. Other positions encode bounded counts for array reads and
+writes, nesting depth, branches, calls, arithmetic operations, memory
+operations, read/write variables, and reduction variables. Array names are
+mapped into fixed five-dimensional hashed summaries so the request size remains
+constant across loops.
+
+The classifier is called with an HTTP POST request whose JSON body contains the
+vector under \texttt{embedding}. The configured timeout bounds network delay.
+The expected response provides one of \texttt{none},
+\texttt{parallel\_for}, or \texttt{reduction}. Rule-selected loops bypass this
+request entirely, which also makes common reductions and indexed writes
+available when no Internet connection is present.
+
+Rewriting uses the source ranges reported by Clang rather than searching for the
+loop text globally. For each selected loop, the one-based start and end lines are
+converted to Python slice indices. The generated pragma-plus-loop segment
+replaces that slice. A running \texttt{shift} records how many lines earlier
+insertions added, ensuring that the ranges of later loops still address the
+correct code. A selected loop is skipped when its complete range lies inside
+another selected range, preventing duplicate inner directives.
+
+\subsection{Native Wrapper, Compilation, and Cache Layers}
+
+Callable optimization adds a second transformation after pragma insertion.
+\path{to_numpy_code_cpp} removes the generated \texttt{main}, strips
+template declarations, maps temporary template types to \texttt{double}, and
+rewrites the selected one-argument function to accept a
+\path{py::array_t<double>}. The wrapper creates a mutable unchecked two-
+dimensional view, translates \texttt{len(X)} and \texttt{len(X[i])} to array
+shape queries, and converts two-dimensional indexing to view calls. This means
+the current direct native-callable path is intentionally restricted to one
+named input parameter representing a two-dimensional double array.
+
+\newpage
+\begin{lstlisting}[
+  style=algostyle,
+  basicstyle=\normalsize\ttfamily,
+  caption={Cached compilation of an optimized Python callable},
+  label={alg:cached-native-compilation}
+  ]
+Input: Python function f and restorable source S
+Output: compiled callable f_native or original f
+
+C = build compilation source from S and helper dependencies
+method_key = hash(cache_version, name, optimization, extension, C)
+if method metadata and shared module exist then
+    dynamically load and return the cached exported function
+end if
+
+C_cpp = convert supported Python AST to C++
+P = apply rule/classifier loop selection and insert OpenMP pragmas
+module_key = hash(cache_version, name, optimization, extension, P)
+wrap P as a PyBind11 NumPy extension named from module_key
+
+if the shared module does not exist then
+    compile with C++17, shared-library, and release-definition flags
+    add -fopenmp only when P contains an OpenMP pragma
+    add Python and PyBind11 include paths
+    add PIC and pipe flags on non-Windows systems
+    use sccache or ccache when enabled and available
+end if
+
+dynamically import the extension and register it in sys.modules
+write method metadata that points to the compiled module
+return the exported function
+on conversion, compilation, or loading failure, return original f
+\end{lstlisting}
+
+There are two persistent cache levels in addition to Python's in-process module
+table. The processed-code cache hashes the cache-format version and input source
+and stores rewritten C++. The Python-method cache additionally includes the
+function name, compiler optimization flag, and platform extension suffix, then
+stores the generated module name in JSON. The compiled-module name hashes the
+final C++ text with the same compatibility inputs. Including
+\texttt{COMPILE\_CACHE\_VERSION} lets developers invalidate old artifacts after
+changing conversion or wrapper semantics.
+
+The compiler defaults to \texttt{c++} on Unix-like systems and searches for
+Clang on Windows, the \texttt{CXX} environment variable can override it.
+\texttt{ACCELERA\_CPP\_OPT\_LEVEL} selects the optimization flag, and
+\texttt{ACCELERA\_USE\_COMPILER\_CACHE=0} disables \texttt{sccache} or
+\texttt{ccache}. OpenMP is linked only when the transformed source actually
+contains \texttt{\#pragma omp}, avoiding an unnecessary OpenMP requirement for
+unchanged serial callables.
+
+\subsection{Integration with Accelera Pipe}
+
+The Code Parallelizer integrates with Accelera Pipe through custom preprocessing
+nodes. If \texttt{Pipeline.preprocess()} receives a custom Python function, the
+pipeline attempts to optimize it with the Parallelizer before storing it inside
+the graph. If it receives a custom transformer object, the transformer instance
+can be optimized through its supported preprocessing method. In both cases, the
+optimization is best-effort: failed conversion, unsupported syntax, compilation
+failure, or module loading failure falls back to the original Python callable.
+
+\begin{figure}[H]
+  \centering
+  \includegraphics[width=0.94\textwidth]{imgs/parallelizer_accelera_pipe_flow.pdf}
+  \caption{Simplified flow for parallelizing a Python method or transformer and using it inside an Accelera Pipe graph node.}
+  \label{fig:integration-flow}
+\end{figure}
+
+Figure~\ref{fig:integration-flow} summarizes the integration at a higher level.
+The preprocessing callable is converted to C++ when it belongs to the supported
+subset, the loop analysis stage adds OpenMP parallelism, and the compiled module
+is attached back to the graph node. The graph therefore keeps the same node
+structure while replacing eligible Python loops with native execution.
+
+Overall, the Code Parallelizer acts as an optimization layer around user-defined
+numeric loops. It does not attempt to parallelize all Python programs. Instead,
+it targets the subset where static analysis, feature extraction, classifier
+prediction, rule validation, and native compilation can cooperate safely.
+
+\subsection{Design Constraints}
+
+The most important design constraint of the Code Parallelizer is correctness.
+OpenMP pragmas can improve performance, but an incorrect pragma can produce
+wrong numerical results. Therefore, classifier output is not applied blindly.
+The module applies additional safety rules to avoid unsafe transformations when
+there are loop-carried dependencies, indirect accesses, early exits, side-effect
+function calls, or invalid reduction variables. Inner loops are also skipped when
+an outer selected loop already covers their range, preventing nested duplicate
+pragma insertion.
+
+The second constraint is the restricted Python subset. Full Python semantics are
+too dynamic to translate safely into C++ using a lightweight source converter.
+The converter therefore rejects unsupported syntax such as decorators, slicing,
+chained comparisons, unsupported operators, non-range loop iterators,
+multi-target assignment, complex dynamic dispatch, and unsupported expression
+forms. This restriction is not a weakness in the design, it is a correctness
+boundary. The system optimizes code only when it can produce predictable C++.
+
+The third constraint is compiler and platform compatibility. Native callable
+optimization depends on a working C++ compiler, Python include paths, PyBind11
+headers, NumPy-compatible array wrapping, and platform-specific shared extension
+suffixes. The compiler path uses C++17 and adds \texttt{-fopenmp} only when the
+parallelized code actually contains OpenMP pragmas. On non-Windows platforms it
+also uses position-independent code flags suitable for shared libraries. If
+compilation fails, the original Python callable is returned.
+
+The fourth constraint is input and output compatibility. The current compiled
+callable path is oriented toward functions with one named input parameter and
+NumPy-like two-dimensional numeric data. The wrapper rewrites array access to
+PyBind11 unchecked NumPy access and exposes the compiled function back to
+Python. This makes the generated extension useful for numeric preprocessing
+loops, but it also means that arbitrary Python functions with complex object
+structures are outside the supported optimization target.
+
+The fifth constraint is reproducibility and caching. Because native compilation
+can be expensive, the module caches processed C++ code and compiled functions
+using source hashes. The cache must include enough information to avoid stale or
+incorrect reuse when compiler options, cache version, function name, source code,
+or extension suffix changes. This design improves repeated execution time while
+keeping cache invalidation explicit.
+
+
+\subsection{Summary}
+
+Overall, the Code Parallelizer adds a code-level acceleration layer to Accelera.
+It accepts supported source code, functions, and transformer methods, analyzes
+loops, inserts OpenMP pragmas only when the decision is safe enough, and can
+compile eligible Python callables into native extensions. If any step fails, the
+original Python behavior is preserved.
+
+This design makes the module useful both as a standalone tool and as an internal
+optimization backend for Accelera Pipe preprocessing nodes. It does not try to
+parallelize every Python program. Instead, it focuses on numeric loop-heavy code
+where conversion, analysis, rewriting, compilation, and fallback can work
+reliably together.
