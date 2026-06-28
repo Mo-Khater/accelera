@@ -109,8 +109,8 @@ a {
   grid-template-columns: minmax(0, 1.05fr) minmax(320px, 0.95fr);
   align-items: center;
   gap: clamp(32px, 6vw, 76px);
-  min-height: calc(100vh - 74px);
-  padding: clamp(56px, 8vw, 110px) clamp(20px, 5vw, 72px);
+  min-height: calc(88vh - 74px);
+  padding: clamp(44px, 6vw, 86px) clamp(20px, 5vw, 72px);
   background:
     linear-gradient(130deg, rgba(34, 84, 214, 0.12), transparent 35%),
     radial-gradient(circle at 84% 18%, rgba(22, 167, 160, 0.16), transparent 28%),
@@ -140,21 +140,21 @@ p {
 h1 {
   max-width: 800px;
   margin-bottom: 22px;
-  font-size: clamp(2.55rem, 6vw, 5.5rem);
-  line-height: 0.97;
+  font-size: clamp(2.15rem, 4.8vw, 4.1rem);
+  line-height: 1.02;
   letter-spacing: 0;
 }
 
 h2 {
   margin-bottom: 14px;
-  font-size: clamp(2rem, 4vw, 3.4rem);
-  line-height: 1.05;
+  font-size: clamp(1.65rem, 3vw, 2.55rem);
+  line-height: 1.12;
   letter-spacing: 0;
 }
 
 h3 {
   margin-bottom: 10px;
-  font-size: 1.15rem;
+  font-size: 1.05rem;
 }
 
 .hero-text,
@@ -163,14 +163,14 @@ h3 {
 .showcase-card p {
   max-width: 680px;
   color: var(--muted);
-  font-size: 1.1rem;
+  font-size: 1rem;
 }
 
 .hero-actions {
   display: flex;
   flex-wrap: wrap;
   gap: 12px;
-  margin: 34px 0;
+  margin: 28px 0;
 }
 
 .button {
@@ -215,7 +215,7 @@ h3 {
 }
 
 .hero-stats dt {
-  font-size: 1.05rem;
+  font-size: 0.98rem;
   font-weight: 850;
 }
 
@@ -256,7 +256,7 @@ h3 {
 
 code {
   font-family: "SFMono-Regular", Consolas, "Liberation Mono", monospace;
-  font-size: 0.9rem;
+  font-size: 0.84rem;
 }
 
 .hero-panel code {
@@ -264,7 +264,7 @@ code {
 }
 
 .section {
-  padding: clamp(64px, 9vw, 112px) clamp(20px, 5vw, 72px);
+  padding: clamp(52px, 7vw, 88px) clamp(20px, 5vw, 72px);
 }
 
 .muted {
@@ -299,7 +299,7 @@ code {
 
 .feature-grid article,
 .module-list article {
-  padding: 24px;
+  padding: 20px;
 }
 
 .feature-grid p,
@@ -384,7 +384,7 @@ code {
 
 .showcase-card {
   max-width: 900px;
-  padding: clamp(28px, 5vw, 46px);
+  padding: clamp(24px, 4vw, 38px);
   background: #18243a;
   border-color: #2c3f61;
 }
@@ -430,7 +430,7 @@ code {
 
 .capability-table article,
 .example-grid article {
-  padding: 24px;
+  padding: 20px;
   border: 1px solid var(--line);
   border-radius: var(--radius);
   background: var(--surface);
