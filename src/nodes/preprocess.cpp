@@ -1,0 +1,163 @@
+#include <filesystem>
+#include <pybind11/embed.h>
+#include <pybind11/functional.h>
+#include <pybind11/numpy.h>
+#include <pybind11/pybind11.h>
+#include <pybind11/stl.h>
+
+#include "core/config.hpp"
+#include "core/graph.hpp"
+#include "nodes/input.hpp"
+#include "nodes/preprocess.hpp"
+
+namespace py = pybind11;
+namespace fs = std::filesystem;
+
+namespace accelera {
+
+PreprocessNode::PreprocessNode(const std::string &name, py::object py_func)
+    : Node(NodeType::PREPROCESS, name, py_func) {}
+
+std::tuple<py::object, py::object>
+PreprocessNode::getInputData(std::shared_ptr<Node> input) {
+  if (input->type == NodeType::INPUT) {
+    auto input_node = std::dynamic_pointer_cast<InputNode>(input);
+    if (!input_node) {
+      throw std::runtime_error("Failed to cast to InputNode");
+    }
+    return {input_node->getX(), input_node->getY()};
+  } else {
+    std::shared_ptr<py::object> data_ptr = input->getData();
+    if (!data_ptr || data_ptr->is_none()) {
+      throw std::runtime_error("Input node data is None");
+    }
+    auto dict = data_ptr->cast<py::dict>();
+    return {dict["X"], dict["y"]};
+  }
+}
+
+void PreprocessNode::validateInputData(const py::object &X) {
+  if (X.is_none()) {
+    throw std::runtime_error("Preprocess node '" + name +
+                             "' received None for X input");
+  }
+}
+
+std::tuple<py::object, py::object> PreprocessNode::processData(py::object X,
+                                                               py::object y) {
+
+  if (py::hasattr(py_func["func"], "fit")) {
+    if (!getGraph()->getIsExecuted()) {
+      py::dict params = py_func.cast<py::dict>();
+      if (!params.contains("_original_func")) {
+        params["_original_func"] = py_func["func"];
+      }
+    }
+
+    py::object transformer_instance =
+        py::module::import("copy").attr("deepcopy")(py_func["func"]);
+
+    py::object execute_fit = py_func["execute_fit"];
+    py::dict params = py_func.cast<py::dict>();
+    bool use_cache =
+        params.contains("cache") ? py::cast<bool>(params["cache"]) : false;
+
+    if (!use_cache) {
+      try {
+        if (!getGraph()->getIsExecuted()) {
+          transformer_instance = execute_fit(transformer_instance, X, y);
+        }
+        X = transformer_instance.attr("transform")(X);
+        py_func["func"] = transformer_instance;
+      } catch (const py::error_already_set &e) {
+        throw std::runtime_error("Python error in model fitting: " +
+                                 std::string(e.what()));
+      }
+      return {X, y};
+    }
+
+    py::module_ joblib = py::module_::import("joblib");
+    py::object hash_obj =
+        joblib.attr("hash")(py::make_tuple(transformer_instance, X));
+    std::string hash_value = hash_obj.cast<std::string>();
+    fs::path currentPath = fs::current_path();
+    fs::path cacheDir = currentPath / config::kCacheDirName;
+    fs::create_directory(cacheDir);
+    fs::path model_path = cacheDir / (hash_value + "model" + ".pkl");
+    fs::path data_path = cacheDir / (hash_value + "data" + ".pkl");
+
+    std::string modelPathStr = model_path.string();
+    std::string dataPathStr = data_path.string();
+
+    if (fs::exists(modelPathStr) && fs::exists(dataPathStr)) {
+      transformer_instance = joblib.attr("load")(modelPathStr);
+      X = joblib.attr("load")(dataPathStr);
+      py_func["func"] = transformer_instance;
+    } else {
+      try {
+        if (!getGraph()->getIsExecuted()) {
+          transformer_instance = execute_fit(transformer_instance, X, y);
+        }
+        X = transformer_instance.attr("transform")(X);
+        py_func["func"] = transformer_instance;
+        joblib.attr("dump")(transformer_instance, modelPathStr);
+        joblib.attr("dump")(X, dataPathStr);
+      } catch (const py::error_already_set &e) {
+        throw std::runtime_error("Python error in model fitting: " +
+                                 std::string(e.what()));
+      }
+    }
+  } else {
+    X = py_func["func"](X);
+  }
+
+  return {X, y};
+}
+
+void PreprocessNode::storeResults(std::shared_ptr<Node> input,
+                                  py::object processed_X,
+                                  py::object processed_y) {
+  if (should_create_new_data) {
+    py::dict new_input;
+    new_input["X"] = processed_X;
+    new_input["y"] = processed_y;
+    setData(std::make_shared<py::object>(new_input));
+  } else {
+    std::shared_ptr<py::object> data_ptr = input->getData();
+    if (!data_ptr || data_ptr->is_none()) {
+      throw std::runtime_error("Input node data is None");
+    }
+    auto dict = data_ptr->cast<py::dict>();
+    dict["X"] = processed_X;
+    dict["y"] = processed_y;
+    setData(data_ptr);
+  }
+}
+
+void PreprocessNode::execute() {
+  try {
+    auto input = getSourceNode();
+    if (!input) {
+      throw std::runtime_error("Preprocess node '" + name +
+                               "' requires a valid input");
+    }
+
+    auto [X, y] = getInputData(input);
+    validateInputData(X);
+
+    if (getShouldCopyInput()) {
+      X = X.attr("copy")();
+      y = y.is_none() ? py::none() : y.attr("copy")();
+      validateInputData(X);
+    }
+
+    auto [processed_X, processed_y] = processData(X, y);
+    storeResults(input, processed_X, processed_y);
+
+  } catch (const std::exception &e) {
+    throw std::runtime_error("Error in preprocess node '" + name +
+                             "': " + e.what());
+  }
+}
+
+} // namespace accelera

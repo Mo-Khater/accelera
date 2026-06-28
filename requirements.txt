@@ -1,0 +1,45 @@
+#autogluon.tabular
+scikit-learn
+pandas==2.3.3
+numpy
+pybind11
+pyngrok
+--extra-index-url https://download.pytorch.org/whl/cpu
+
+# Python 
+regex
+build
+
+# ml
+catboost
+ConfigSpace
+joblib
+lightgbm
+scipy
+xgboost
+torch==2.12.0+cpu
+torchvision==0.27.0+cpu
+dm-tree
+category-encoders
+kagglehub
+
+# deployment
+fastapi
+great-expectations
+uvicorn[standard]
+pydantic
+python-multipart
+
+# testing 
+graphviz
+gdown
+tqdm
+pre-commit
+ruff
+pytest
+matplotlib
+seaborn
+nltk
+platformdirs
+requests
+AutoCleanML

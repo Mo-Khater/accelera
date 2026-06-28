@@ -1,0 +1,420 @@
+\section{Deployment Module}
+\label{sec:deployment-module}
+
+\subsection{Module Responsibility}
+\noindent The Deployment module is the part of Accelera that turns a trained
+machine-learning result into a usable software service. Without deployment, the
+output of a machine-learning workflow remains a local artifact, such as a
+\texttt{.pkl} file or a saved preprocessing object. These artifacts may be
+technically valuable, but they cannot serve real users until they are loaded by
+a backend application, validated against expected input formats, exposed through
+an API, and executed in an environment that can be reached by clients.
+
+The module therefore completes Accelera's end-to-end workflow. It receives
+deployment inputs from the workspace, including \texttt{config.json} and model
+pickle files under \texttt{models/}. It can snapshot these files using a
+lightweight model VCS, prepare a FastAPI serving application, package the
+service inside Docker, and execute deployment workflows for local Docker,
+Heroku, and AWS EC2. At runtime, the generated service validates incoming
+requests using Great Expectations, executes model inference through
+\texttt{ModelService}, and records prediction telemetry through the request
+tracker.
+
+Figure~\ref{fig:deployment_module_overview} summarizes this responsibility.
+The figure is important because it shows the Deployment module as a complete
+bridge between saved workspace artifacts and running deployment targets. The
+upper part of the flow represents local inputs and version control, the middle
+part represents service generation and serving behavior, and the lower part
+represents the targets on which the service can run.
+
+\begin{figure}[H]
+\centering
+\makebox[\textwidth][c]{\includegraphics[width=1.2\textwidth,height=0.62\textheight,keepaspectratio]{dots/deployment_module.pdf}}
+\caption{Deployment module overview from workspace artifacts to serving targets.}
+\label{fig:deployment_module_overview}
+\end{figure}
+
+The core files under \modulepath{accelera/src/deployment/} are listed in
+Table~\ref{tab:deployment_implementation_units}. This table connects the
+conceptual architecture with the actual source files in the repository and
+shows how each file owns a clear part of the deployment workflow.
+
+\begin{table}[H]
+\centering
+\acceleraTableStyle
+\caption{Deployment module implementation units.}
+\label{tab:deployment_implementation_units}
+\begin{tabularx}{\textwidth}{p{0.31\textwidth}X}
+\toprule
+\textbf{File} & \textbf{Responsibility} \\
+\midrule
+\modulepath{server.py} &
+Defines the FastAPI application, prediction endpoints, CSV inference endpoint,
+health endpoint, tracking summary endpoint, and interactive GUI route. \\
+\midrule
+\modulepath{modelservice.py} &
+Loads \texttt{config.json}, deserializes model and preprocessor artifacts, runs
+preprocessing transforms, and calls the final estimator's prediction method. \\
+\midrule
+\modulepath{schema\_validation.py} &
+Validates request columns, required values, allowed values, numeric bounds, and
+type coercion using Great Expectations and local validation logic. \\
+\midrule
+\modulepath{tracking.py} &
+Records prediction activity, request status, row counts, latencies, and
+tracking summaries in line-separated JSON records. \\
+\midrule
+\modulepath{deployment.py} &
+Prepares deployment files, writes requirements, generates the Dockerfile,
+builds and runs local containers, and orchestrates Heroku and EC2 deployments. \\
+\midrule
+\modulepath{vcs.py} &
+Creates deployment commits, stores model/configuration snapshots, records the
+active \texttt{HEAD}, and restores historical snapshots for rollback. \\
+\bottomrule
+\end{tabularx}
+\end{table}
+
+\subsection{Service Architecture}
+\noindent The serving subsystem is built around FastAPI, Uvicorn,
+\texttt{ModelService}, schema validation, and telemetry tracking. FastAPI
+receives HTTP requests, \texttt{ModelService} loads the configured model
+artifacts, the validation layer checks input quality before inference, and the
+tracker records each request outcome. This design gives the deployed model a
+clear runtime boundary: clients interact with API endpoints, while the model
+itself remains isolated behind validation and service logic.
+
+Before presenting the internal stages, Figure~\ref{fig:serving_architecture}
+shows the serving architecture used inside the container. The diagram explains
+how requests flow from the HTTP layer to validation, model inference, and
+tracking. This separation is important because it prevents the model from being
+called directly with untrusted or malformed data.
+
+\begin{figure}[H]
+\centering
+\includegraphics[width=0.85\textwidth]{imgs/serving_architecture.pdf}
+\caption{Model serving architecture and execution flow.}
+\label{fig:serving_architecture}
+\end{figure}
+
+The service exposes several routes. The \texttt{/predict} endpoint accepts JSON
+payloads, while \texttt{/predict/csv} accepts uploaded CSV files for batch
+prediction. The \texttt{/health} endpoint reports whether the service is
+loaded, which is useful for local checks and remote deployment verification.
+The \texttt{/tracking/summary} endpoint exposes basic request-tracking
+information, and \texttt{/gui} renders an interactive form generated from the
+configured schema.
+
+\subsection{Configuration and Artifact Preparation}
+\noindent The deployment process begins from two concrete workspace inputs:
+\texttt{config.json} and model artifacts. The configuration file describes the
+models to load, the validation schema, and the tracking configuration. The
+model files are serialized Python objects, typically Scikit-learn estimators,
+preprocessors, or feature selectors stored as \texttt{.pkl} files. The module
+does not assume one fixed estimator type; instead, \texttt{ModelService} loads
+configured artifacts and treats the object with a \texttt{predict} method as
+the final model, while objects with \texttt{transform} methods are treated as
+preprocessors.
+
+Algorithm~\ref{alg:deployment_prepare_artifacts} describes the preparation
+workflow. This algorithm matters because deployment should not begin until the
+module confirms that every configured model path exists and that all runtime
+files are available inside the deployment workspace.
+
+\begin{lstlisting}[style=algostyle,caption={Preparing deployment artifacts},label={alg:deployment_prepare_artifacts}]
+Input: workspace root, config.json, configured model paths
+Output: deployment workspace with runtime files, models, requirements, and Dockerfile
+
+1: Read config.json from the deployment workspace
+2: Extract the models mapping from the configuration
+3: For each configured model path do
+4:     Resolve the path relative to the configuration file
+5:     If the file does not exist, stop with a descriptive error
+6:     Copy the artifact into the deployment models directory
+7:     Rewrite the model path as a deployment-relative path
+8: End for
+9: Copy server.py, modelservice.py, schema_validation.py, tracking.py, and deployment.py
+10: Synchronize the accelera package into the serving workspace
+11: Write runtime requirements for FastAPI, Uvicorn, Great Expectations, Pandas, NumPy, and model libraries
+12: Generate a Dockerfile that copies the service, configuration, and model files
+13: Return the prepared deployment workspace
+\end{lstlisting}
+
+After this algorithm completes, the local workspace has a repeatable service
+package. The important result is that the deployment engine no longer depends
+on scattered project files; it has a prepared runtime directory, a
+\texttt{Dockerfile}, dependency information, the active configuration, and the
+model artifacts needed by the service.
+
+\subsection{Runtime Validation, Inference, and Tracking}
+\noindent Runtime validation is a central part of the Deployment module because
+machine-learning models are sensitive to input shape, feature order, data type,
+and value ranges. A request may be syntactically valid JSON but still invalid
+for the trained model. The validation layer handles this by checking expected
+columns, missing values, unexpected fields, allowed values, and numeric bounds.
+It also coerces values into the expected data types where possible.
+
+Algorithm~\ref{alg:deployment_validate_predict_track} summarizes the prediction
+path followed by the serving application. The algorithm is written at the
+service level rather than as raw code because the key contribution is the
+sequence of validation, inference, and telemetry responsibilities.
+
+\begin{lstlisting}[style=algostyle,caption={Validating a request, running inference, and tracking the result},label={alg:deployment_validate_predict_track}]
+Input: API payload or uploaded CSV, active deployment configuration
+Output: prediction response or structured API error
+
+1: Receive the request at /predict or /predict/csv
+2: Record the request start time
+3: Convert the payload into a tabular representation
+4: Validate required feature names and detect extra or missing features
+5: Coerce values to the configured types when possible
+6: Check numeric ranges and allowed categorical values
+7: If validation fails, record a validation_error event and return HTTP 422
+8: Convert validated rows into a NumPy-compatible array
+9: Apply loaded preprocessors in the configured order
+10: Call predict on the final model artifact
+11: Compute request latency in milliseconds
+12: Record endpoint, status, row count, latency, and predictions in telemetry
+13: Return row count and predictions to the client
+\end{lstlisting}
+
+The result is a deployed model service that is safer and more observable than a
+minimal prediction script. Invalid inputs are rejected with structured errors,
+successful predictions are returned through a consistent API response, and
+request activity is recorded for later inspection.
+
+\subsection{Model Version Control}
+\noindent The Deployment module includes a lightweight VCS dedicated to model
+deployment artifacts. This system is different from Git because it does not
+track all source-code changes. Instead, it snapshots the active
+\texttt{config.json} file and model files into an \texttt{experiments/}
+directory, assigns a short SHA-1 commit identifier, and records metadata in
+\texttt{experiments.json}. This allows a user to return to a previous deployed
+model configuration without manually copying files.
+
+Figure~\ref{fig:deployment_vcs_overview} gives the high-level VCS structure.
+It shows the relationship between the active deployment workspace, the index
+file, the committed experiment directories, and the restored deployment state.
+
+\begin{figure}[H]
+\centering
+\makebox[\textwidth][c]{\includegraphics[width=1.02\textwidth]{dots/deployment_vcs.pdf}}
+\caption{Deployment VCS registry structure.}
+\label{fig:deployment_vcs_overview}
+\end{figure}
+
+The commit workflow is shown in Figure~\ref{fig:vcs_commit_flow}. Before this
+figure, it is useful to note that a deployment commit is not only a text label.
+It is a reproducibility unit containing both configuration and model binaries.
+
+\begin{figure}[H]
+\centering
+\makebox[\textwidth][c]{\includegraphics[width=1.12\textwidth]{dots/deployment_commit.pdf}}
+\caption{VCS commit workflow for deployment artifacts.}
+\label{fig:vcs_commit_flow}
+\end{figure}
+
+Algorithm~\ref{alg:deployment_vcs_commit} describes the commit process in
+pseudocode. This workflow supports reproducibility by ensuring that the model
+files referenced by a configuration are copied into the same commit directory
+as the configuration itself.
+
+\begin{lstlisting}[style=algostyle,caption={Creating a deployment VCS commit},label={alg:deployment_vcs_commit}]
+Input: commit message, active config.json, active model files
+Output: new deployment commit and updated experiments index
+
+1: Require a non-empty commit message
+2: Load and parse config.json
+3: Resolve every model path listed in the models mapping
+4: If any configured artifact is missing, stop the commit
+5: Load experiments.json
+6: Generate a short SHA-1 commit identifier from timestamp and message
+7: Create experiments/<commit-hash>/models/
+8: Copy model artifacts into the commit models directory
+9: Rewrite model paths in the committed configuration as relative paths
+10: Write config.json and metadata.json inside the commit directory
+11: Append the commit record to experiments.json
+12: Move HEAD to the new commit hash
+\end{lstlisting}
+
+After committing, the deployment workspace has an auditable model history. The
+history can be listed, inspected, and used to restore an earlier model
+snapshot. Figure~\ref{fig:vcs_deploy_flow} shows the deploy/rollback workflow
+that copies a selected snapshot back into the active runtime workspace.
+
+\begin{figure}[H]
+\centering
+\makebox[\textwidth][c]{\includegraphics[width=1.12\textwidth]{dots/deployment_deploy.pdf}}
+\caption{VCS deploy and rollback workflow.}
+\label{fig:vcs_deploy_flow}
+\end{figure}
+
+\subsection{Deployment Orchestration}
+\noindent The deployment orchestrator is responsible for converting the
+prepared service package into a running service. Its local path uses Docker to
+build and run the container on the developer machine. Its Heroku path uses the
+Heroku CLI and Container Registry. Its EC2 path uses SSH and \texttt{rsync} to
+synchronize files to a remote virtual machine, build the Docker image on the
+server, start the container, and verify the service through a health request.
+
+Figure~\ref{fig:orchestration_flow} presents the supported deployment targets.
+The figure is placed before the detailed algorithms because it helps the reader
+understand that the same prepared model service can be sent to different
+execution environments.
+
+\begin{figure}[H]
+\centering
+\makebox[\textwidth][c]{\includegraphics[width=1.12\textwidth]{dots/deployment_targets.pdf}}
+\caption{Multi-target deployment orchestration flow.}
+\label{fig:orchestration_flow}
+\end{figure}
+
+Algorithm~\ref{alg:deployment_local_container} describes the local Docker
+workflow. This path is useful for testing the deployment service before moving
+it to a cloud or server environment.
+
+\begin{lstlisting}[style=algostyle,caption={Building and running the local deployment container},label={alg:deployment_local_container}]
+Input: prepared deployment workspace and target port
+Output: running local Docker container
+
+1: Prepare deployment files and Dockerfile
+2: Build the Docker image named ml-model
+3: Read the service port from the PORT environment variable or use 8000
+4: Stop any currently running container that publishes the same port
+5: Start the ml-model container with the selected port mapping
+6: Print the local API URL and GUI URL
+7: Keep the container process attached for local inspection
+\end{lstlisting}
+
+Once this workflow completes, the user can test the model through the local
+\texttt{/predict}, \texttt{/health}, or \texttt{/gui} routes on the selected
+port.
+This local path is especially valuable because it validates the complete serving
+package before a remote deployment is attempted.
+
+Algorithm~\ref{alg:deployment_ec2} describes the EC2 workflow. EC2 deployment
+is more complex because it involves a remote machine, SSH authentication,
+network ports, remote Docker execution, and health verification.
+
+\newpage
+\begin{lstlisting}[style=algostyle,caption={Deploying the model service to AWS EC2},label={alg:deployment_ec2}]
+Input: EC2 host, SSH user, optional private key, remote directory, port, image name, container name
+Output: running EC2-hosted deployment service or a diagnostic error
+
+1: Prepare local deployment files and Dockerfile
+2: Build the SSH command using host, user, key, and host-key settings
+3: Create the remote deployment directory over SSH
+4: Synchronize Dockerfile, config.json, accelera_deployment, and models using rsync
+5: If requested, install and start Docker on the EC2 host
+6: Build the Docker image on the remote host
+7: Remove any old container with the target container name
+8: Start the new container with restart policy and port mapping
+9: Probe the container health endpoint from inside the host
+10: Print docker ps status, public application URL, and GUI URL
+11: Probe the public /health URL from the local machine
+12: If the public check fails, report that the TCP port may need to be opened
+\end{lstlisting}
+
+The result of the EC2 workflow is a public service URL when the instance,
+firewall rules, and Docker runtime are configured correctly. If the service is
+running internally but the public health check fails, the module gives a useful
+diagnostic message so the user can inspect security-group or port settings.
+
+\subsection{Command-Line Interface}
+\noindent The Deployment module exposes its behavior through command-line
+interfaces. This is appropriate for deployment because users often need to run
+the same operational steps repeatedly during testing, rebuilding, release, and
+rollback. Table~\ref{tab:deployment_orchestrator_commands} summarizes the
+orchestrator commands, while Table~\ref{tab:deployment_vcs_commands} summarizes
+the model VCS commands.
+
+\begin{table}[H]
+\centering
+\acceleraTableStyle
+\caption{Deployment orchestrator commands.}
+\label{tab:deployment_orchestrator_commands}
+\begin{tabularx}{\textwidth}{p{0.24\textwidth}X}
+\toprule
+\textbf{Command} & \textbf{Purpose} \\
+\midrule
+\texttt{prepare} & Copy serving files, synchronize the package, write
+requirements, validate model paths, and generate the Dockerfile. \\
+\midrule
+\texttt{build} & Build the local Docker image, optionally without cache. \\
+\midrule
+\texttt{run-local} & Start the local Docker container and publish the selected
+port. \\
+\midrule
+\texttt{local} & Run \texttt{prepare}, \texttt{build}, and \texttt{run-local}
+as one local deployment workflow. \\
+\midrule
+\texttt{heroku-create} & Create a Heroku app configured for the container
+stack. \\
+\midrule
+\texttt{heroku-push} and \texttt{heroku-release} & Push the web container to
+Heroku and release it for traffic. \\
+\midrule
+\texttt{heroku-deploy} & Execute the combined Heroku deployment sequence. \\
+\midrule
+\texttt{ec2-deploy} & Synchronize files to EC2, build the container remotely,
+start the service, and verify health. \\
+\midrule
+\texttt{ec2-stop} and \texttt{ec2-logs} & Stop the remote container or stream
+its logs for inspection. \\
+\bottomrule
+\end{tabularx}
+\end{table}
+
+\begin{table}[H]
+\centering
+\acceleraTableStyle
+\caption{Deployment VCS commands.}
+\label{tab:deployment_vcs_commands}
+\begin{tabularx}{\textwidth}{p{0.24\textwidth}X}
+\toprule
+\textbf{Command} & \textbf{Purpose} \\
+\midrule
+\texttt{init} & Initialize the deployment experiment directory and empty
+\texttt{experiments.json} index. \\
+\midrule
+\texttt{commit} & Snapshot the active \texttt{config.json} and model files
+under a short hash and commit message. \\
+\midrule
+\texttt{status} & Display registry status, including total commits,
+\texttt{HEAD}, and deployed commit when available. \\
+\midrule
+\texttt{log} & Print recorded commits in reverse chronological order. \\
+\midrule
+\texttt{show} & Display a specific commit's metadata, configuration, and model
+files. \\
+\midrule
+\texttt{deploy} & Restore a selected commit's configuration and model files
+into the active deployment workspace. \\
+\bottomrule
+\end{tabularx}
+\end{table}
+
+These commands make the module usable from scripts, demos, and repeatable
+terminal workflows. They also make the deployment process more transparent:
+users can run preparation, local testing, remote deployment, logging, stopping,
+committing, and rollback as separate steps instead of treating deployment as a
+single hidden operation.
+
+\subsection{Technical Value of the Module}
+\noindent The Deployment module is valuable because it pushes Accelera beyond
+model construction. It gives the project a practical final stage where trained
+models become reachable services with validation, observability, versioning,
+and target-specific deployment workflows. This makes Accelera stronger than a
+normal training-only tool: it supports the path from data preparation and model
+selection to an API that can be tested through a browser, called by another
+application, monitored through tracking summaries, and moved between local and
+remote environments.
+
+The design is intentionally lightweight. It does not claim to replace large
+enterprise MLOps platforms, Kubernetes serving systems, or managed cloud AI
+services. Instead, it provides a focused deployment layer that fits the scale of
+the project and connects directly to Accelera's generated artifacts. For a
+graduation project, this is a significant engineering contribution because it
+requires combining machine-learning artifact management, web serving,
+validation, telemetry, Docker packaging, cloud/server operations, and testing
+into one coherent module.

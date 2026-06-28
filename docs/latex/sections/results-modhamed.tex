@@ -1,0 +1,305 @@
+\subsection{Accelera Pipe Module}
+
+The Accelera Pipe experiments compare three implementations under the same
+train, validation, and test split. The first implementation is a manually
+written scikit-learn loop over the candidate pipelines. The second uses
+\texttt{sklearn.pipeline.Pipeline} to represent the same candidates. The third
+uses Accelera Pipe with graph branches. Each candidate is selected using
+validation accuracy, and the final selected path is evaluated on the test set.
+This protocol checks whether the graph execution improves latency without
+changing the selected model or the measured predictive accuracy.
+
+\begin{table}[H]
+\centering
+\caption{Accelera Pipe latency scaling in seconds}
+\label{tab:pipe-latency-scale}
+\begin{tabular}{rrrr}
+\toprule
+Samples & sklearn & sklearn Pipeline & Accelera Pipe \\
+\midrule
+1,000 & 0.06 & \bestcell 0.05 & 0.34 \\
+5,000 & 2.47 & 2.12 & \bestcell 2.02 \\
+10,000 & 2.48 & 2.48 & \bestcell 1.79 \\
+50,000 & 23.96 & 23.25 & \bestcell 14.81 \\
+100,000 & 77.79 & 77.10 & \bestcell 67.04 \\
+250,000 & 803.56 & 803.01 & \bestcell 494.64 \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+Table~\ref{tab:pipe-latency-scale} shows the main performance trend without
+compressing the font. At very small sizes, Accelera Pipe is slower because the
+native graph setup, branch creation, and Python/C++ boundary cost dominate the
+actual model computation. Once the dataset grows, those fixed costs become
+small compared with fitting multiple candidate branches. At 50,000 samples,
+Accelera Pipe reduces runtime from 23.96 seconds to 14.81 seconds. At 250,000
+samples, it reduces runtime from about 803 seconds to about 495 seconds,
+saving more than five minutes while selecting the same candidate.
+
+\begin{table}[H]
+\centering
+\caption{Accelera Pipe RSS memory scaling in MB}
+\label{tab:pipe-memory-scale}
+\begin{tabular}{rrrr}
+\toprule
+Samples & sklearn & sklearn Pipeline & Accelera Pipe \\
+\midrule
+1,000 & 1.62 & \bestcell 0.16 & 19.32 \\
+5,000 & 3.62 & \bestcell 1.09 & 21.62 \\
+10,000 & 11.47 & \bestcell 2.19 & 7.25 \\
+50,000 & 126.95 & \bestcell 9.75 & 209.25 \\
+100,000 & 139.70 & \bestcell 47.65 & 300.93 \\
+250,000 & 303.95 & \bestcell 28.52 & 594.86 \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+Table~\ref{tab:pipe-memory-scale} shows the current cost of graph-level
+parallelism. Accelera Pipe uses more RSS memory because multiple branch states
+and intermediate arrays can exist at the same time. The memory optimizations
+in the methodology section, especially consumer-count based release,
+duplicate first-node sharing, and guarded preprocessing copies, target exactly
+this issue.
+
+\begin{table}[H]
+\centering
+\caption{Selected candidate and accuracy across sample sizes}
+\label{tab:pipe-accuracy}
+\begin{tabular}{rlll}
+\toprule
+Samples & Selected candidate & Validation accuracy & Test accuracy \\
+\midrule
+1,000 & MinMaxScaler $\rightarrow$ SVC & 0.7900 & 0.8250 \\
+5,000 & MinMaxScaler $\rightarrow$ SVC & 0.9160 & 0.9100 \\
+10,000 & MinMaxScaler $\rightarrow$ SVC & 0.9385 & 0.9260 \\
+50,000 & MinMaxScaler $\rightarrow$ SVC & 0.9565 & 0.9598 \\
+100,000 & StandardScaler $\rightarrow$ SVC & 0.9675 & 0.9709 \\
+250,000 & StandardScaler $\rightarrow$ SVC & 0.9774 & 0.9768 \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+Table~\ref{tab:pipe-accuracy} confirms that the speedup does not come from changing the search
+space. Accelera Pipe evaluates the same candidate pipelines and reports the
+same validation and test behavior. The selected preprocessing strategy changes
+from MinMax scaling to standard scaling only when the larger dataset makes
+StandardScaler with SVC the best validation candidate. This is expected because
+the candidate set and selection rule are fixed while the data distribution
+becomes better represented at larger sizes.
+
+\begin{table}[H]
+\centering
+\caption{Largest Accelera Pipe comparison}
+\label{tab:pipe-largest}
+\begin{tabular}{lrrrr}
+\toprule
+Implementation & Time (s) & RSS MB & VMS MB & Test accuracy \\
+\midrule
+sklearn manual loop & 803.56 & 303.95 & 315.41 & 0.9768 \\
+sklearn Pipeline & 803.01 & \bestcell 28.52 & \bestcell 28.61 & 0.9768 \\
+Accelera Pipe & \bestcell 494.64 & \warncell 594.86 & \warncell 787.47 & 0.9768 \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+Table~\ref{tab:pipe-largest} isolates the largest run: 150,000 training samples, 50,000 validation
+samples, and 50,000 test samples. Accelera Pipe keeps exactly the same selected
+path, StandardScaler followed by SVC, and the same test accuracy. The runtime
+drop is 308.91 seconds relative to the manual scikit-learn loop and 308.36
+seconds relative to scikit-learn Pipeline. This result is important because it
+demonstrates the value of graph scheduling on realistic branch-heavy workloads.
+The memory columns also show the next engineering target: scikit-learn Pipeline
+is extremely memory efficient, while Accelera Pipe trades memory for parallel
+branch execution and native graph state.
+
+\subsection{Code Parallelizer Module}
+
+The OpenMP classifier was evaluated as a three-class loop classifier. The
+labels are \texttt{none}, \texttt{parallel\_for}, and \texttt{reduction}. The
+classification report shows that the model is balanced enough to guide the
+rule layer, while the final pragma decision remains protected by dependency
+checks.
+
+\begin{table}[H]
+\centering
+\caption{OpenMP classifier report}
+\label{tab:classifier-report}
+\begin{tabular}{lrrrr}
+\toprule
+Class & Precision & Recall & F1-score & Support \\
+\midrule
+none & 0.82 & 0.85 & 0.84 & 3048 \\
+parallel\_for & 0.86 & 0.81 & 0.83 & 2696 \\
+reduction & 0.79 & 0.82 & 0.80 & 775 \\
+\midrule
+accuracy & & & 0.83 & 6519 \\
+macro avg & 0.82 & 0.83 & 0.83 & 6519 \\
+weighted avg & 0.83 & 0.83 & 0.83 & 6519 \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+Table~\ref{tab:classifier-report} should be read as a guidance-quality result, not as a proof that every
+predicted loop is safe. The classifier is responsible for identifying likely
+parallelization opportunities. The rule layer is responsible for rejecting
+unsafe or unsupported cases. This two-stage design is useful because source
+code parallelization has correctness constraints that pure statistical
+classification should not decide alone.
+
+\begin{table}[H]
+\centering
+\caption{Hard parallelizer evaluation}
+\label{tab:hard-eval}
+\begin{tabular}{lrrrr}
+\toprule
+File & Baseline ms & Parallel ms & Speedup & Output match \\
+\midrule
+hard\_eval\_000.cpp & 1786.28 & \bestcell 195.47 & 9.138$\times$ & true \\
+hard\_eval\_001.cpp & 63.98 & \bestcell 31.47 & 2.033$\times$ & true \\
+hard\_eval\_002.py & 42.66 & \bestcell 7.67 & 5.563$\times$ & true \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+Table~\ref{tab:hard-eval} evaluates harder programs from \modulepath{data/hard\_test\_files}.
+The benchmark compiles and runs both the baseline and the generated
+parallelized code, then compares their outputs. The first file obtains the
+largest improvement because its loop body has enough work to amortize OpenMP
+thread overhead. The second file still improves, but the smaller absolute
+runtime limits the maximum speedup. The Python-origin file demonstrates the
+full converter path: Python subset to C++, then loop extraction, then pragma
+insertion. Across the three files, the evaluation extracted 11 loops, generated
+8 pragmas, matched all 8 expected pragmas, reached average similarity 1.0, and
+obtained an average speedup of 5.578$\times$.
+
+\begin{table}[H]
+\centering
+\caption{Linux parallelizer and Accelera Pipe integration benchmark}
+\label{tab:pipe-parallelizer-integration}
+\begin{tabular}{lrr}
+\toprule
+Mode & Samples & Time (s) \\
+\midrule
+Python custom preprocessing function & 500,000 & 6.83 \\
+End-to-end optimized run, first measured process & 500,000 & 5.88 \\
+End-to-end optimized run, warmed method and module cache & 500,000 & \bestcell 0.08 \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+Table~\ref{tab:pipe-parallelizer-integration} reports the Linux direct
+\modulepath{examples/parallel\_accpipe.py} run after normalizing the example
+execution directory to the repository root. The Python implementation takes
+6.83 seconds on 500,000 samples. The first optimized process in the measurement
+sequence takes 5.88 seconds because it still pays process-local setup and cache
+lookup costs. The immediate repeated run takes 0.08 seconds after the
+Python-method cache and compiled-module cache are both warm. The validation in
+the example confirmed that the optimized output matched the Python output. This
+result shows why the integration needs two cache layers: one layer avoids
+repeating Python-to-C++ conversion and OpenMP insertion, while the lower
+compiled-module cache avoids recompiling the pybind extension.
+
+\begin{table}[H]
+\centering
+\caption{Linux direct example-script verification runs}
+\label{tab:direct-example-runs}
+\footnotesize
+\begin{tabular}{lrrr}
+\toprule
+Example & Baseline time (s) & Optimized time (s) & Validation \\
+\midrule
+\texttt{accpipe\_demo} & 2.48 & \bestcell 1.79 & same accuracy, 0.9260 \\
+\texttt{parallel\_accpipe}, run 1 & 6.83 & \bestcell 5.88 & outputs match \\
+\texttt{parallel\_accpipe}, run 2 & 6.83 & \bestcell 0.08 & outputs match \\
+\texttt{code\_parallelizer}, run 1 & 5.81 & \bestcell 0.014 & outputs match \\
+\texttt{code\_parallelizer}, run 2 & 6.05 & \bestcell 0.015 & outputs match \\
+\texttt{save\_load}, run 1 & 1.89 & 2.69 / 2.65 & same accuracy, 0.268 \\
+\texttt{save\_load}, run 2 & 2.53 & \bestcell 2.20 / 2.14 & same accuracy, 0.268 \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+Table~\ref{tab:direct-example-runs} summarizes the Linux examples invoked by
+\modulepath{examples/Makefile}, but each file was run directly rather than
+through Make. Cache-sensitive files were repeated. The standalone
+\modulepath{code\_parallelizer\_demo.py} result measures Python script execution
+against the generated OpenMP executable for \modulepath{hard\_eval\_002.py}; the
+C path also reported about 0.26--0.27 seconds of compilation time, outside the
+listed executable runtime. The save/load example verifies persistence rather
+than pure acceleration: both sklearn and Accelera load persisted state and
+produce the same accuracy, while the second Accelera run is slightly faster
+than the sklearn baseline.
+
+\begin{table}[H]
+\centering
+\caption{Windows direct example correctness and path timing}
+\label{tab:direct-example-runs-windows}
+\footnotesize
+\setlength{\tabcolsep}{4pt}
+\begin{tabular}{llrrl}
+\toprule
+Example & Run/cache state & Baseline (s) & Accelera/C path (s) & Validation \\
+\midrule
+\texttt{accpipe\_demo} & normal & 1.75 / 1.78 & \bestcell 1.03 &
+same test accuracy, 0.9260 \\
+\texttt{parallel\_accpipe} & isolated cache, run 1 & 6.66 &
+\bestcell 6.00 & outputs match \\
+\texttt{parallel\_accpipe} & isolated cache, run 2 & 6.58 &
+\bestcell 0.09 & outputs match \\
+\texttt{code\_parallelizer} & isolated cache, run 1 & 5.59 &
+\bestcell 1.04 & outputs match \\
+\texttt{code\_parallelizer} & isolated cache, run 2 & 5.61 &
+\bestcell 1.05 & outputs match \\
+\texttt{save\_load} & normal & 0.57 & \bestcell 0.51 / 0.53 &
+same accuracy, 0.268 \\
+\bottomrule
+\end{tabular}
+\setlength{\tabcolsep}{6pt}
+\end{table}
+
+\begin{table}[H]
+\centering
+\caption{Windows compilation and process overhead}
+\label{tab:direct-example-runs-windows-overhead}
+\footnotesize
+\begin{tabular}{llrrl}
+\toprule
+Example & Run/cache state & Compile/link (s) & Wall time (s) & Interpretation \\
+\midrule
+\texttt{accpipe\_demo} & normal & -- & 6.53 & graph example startup \\
+\texttt{parallel\_accpipe} & isolated cache, run 1 & included & 14.37 & cold compile path \\
+\texttt{parallel\_accpipe} & isolated cache, run 2 & cached & 8.33 & warm cache path \\
+\texttt{code\_parallelizer} & isolated cache, run 1 & 0.87 & 8.74 & temporary executable \\
+\texttt{code\_parallelizer} & isolated cache, run 2 & 1.04 & 9.00 & temporary executable \\
+\texttt{save\_load} & normal & -- & 2.71 & persistence example \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+Tables~\ref{tab:direct-example-runs-windows}
+and~\ref{tab:direct-example-runs-windows-overhead} report the same Makefile
+example set on Windows. The first table keeps the user-visible comparison:
+baseline runtime, optimized path runtime, and validation result. The second
+table separates compilation and process-level overhead so the timing table
+remains readable. The examples were run one by one in Makefile order. The
+cache-sensitive examples were then repeated under an isolated Accelera cache so
+that the first run represents cold cache behavior and the second run represents
+warm cache behavior. The strongest cache effect appears in
+\modulepath{parallel\_accpipe.py}: the cold end-to-end Accelera path takes
+6.00 seconds because it must convert the function, select loops, compile a
+pybind extension, link it, and load it into Python. The immediate warm-cache
+run takes 0.09 seconds because the processed-code cache, method cache, and
+compiled-module cache avoid repeating those setup stages.
+
+The Windows \modulepath{code\_parallelizer\_demo.py} runs show a different
+limitation. The generated C/OpenMP executable is compiled into a temporary
+directory on every run, so the second run does not reuse the final linked
+program. The measured C executable subprocess takes about 1.04 seconds, while
+the instrumented main-body timer inside the generated program reports only
+about 0.024--0.025 seconds. This gap is Windows process startup, OpenMP runtime
+initialization, dynamic library loading, and executable loading overhead. The
+compile/link step itself adds about 0.87--1.04 seconds. On Linux, the same
+benchmark has lower launch and linking overhead in the reported measurements,
+so executable runtime is closer to the timed main-body work. For this reason,
+Windows results should be interpreted as end-to-end toolchain latency results,
+not only as loop-kernel speed results.
